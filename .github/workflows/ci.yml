@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # release.yml から呼び、公開する VSIX をここで作って確かめる
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows を入れないのは、テストで使う偽の llama-server がシバン付きのスクリプトで、Windows では実行できないため。
+        # Windows で実物が動くかは downloads.yml で確かめる。
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run package
+      # ソースではなく VSIX の中身で確かめるのは、公開するものに必要なファイルがそろっているかも確かめるため
+      - name: 統合テスト（展開した VSIX）
+        run: |
+          python3 -m zipfile -e interlinear-*.vsix "$RUNNER_TEMP/vsix"
+          node esbuild.mjs --tests
+          export INTERLINEAR_EXTENSION_PATH="$RUNNER_TEMP/vsix/extension"
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a node test/integration/run.ts; else node test/integration/run.ts; fi
+      - if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: vsix
+          path: interlinear-*.vsix
+          if-no-files-found: error

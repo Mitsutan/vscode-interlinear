@@ -1,0 +1,53 @@
+name: Downloads
+
+# 自動管理でダウンロードする llama.cpp とモデルが、今も取得でき、各 OS で起動して訳せるかを確かめる。
+# 配布元の変更でコードを変えていなくても壊れることがあるので、定期的にも実行する。
+on:
+  schedule:
+    - cron: '0 18 * * 0' # 毎週月曜 3:00（日本時間）
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - src/managed/**
+      - scripts/install-real.ts
+      - .github/workflows/downloads.yml
+  pull_request:
+    paths:
+      - src/managed/**
+      - scripts/install-real.ts
+      - .github/workflows/downloads.yml
+
+permissions:
+  contents: read
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      # すべてのプラットフォーム向けのファイルについて、URL とサイズを確かめる
+      - run: npm run check:manifest
+
+  real-server:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        # Windows でも bash で動かす。Git の GNU tar が PATH の先に来る環境でも展開できるかを、あわせて確かめられる
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: llama.cpp と 0.8B のモデルを、自動管理と同じ方法でダウンロードする
+        run: node scripts/install-real.ts "$RUNNER_TEMP/interlinear" 0.8b >> "$GITHUB_ENV"
+      - name: llama-server を起動して訳す
+        run: node --test --test-name-pattern='本物の llama-server' test/unit/managed.test.ts

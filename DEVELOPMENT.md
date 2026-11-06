@@ -40,7 +40,13 @@ xvfb-run -a npm run test:integration     # ディスプレイのない Linux（�
 | `INTERLINEAR_SCREENSHOT_DIR=<ディレクトリ>` | `INTERLINEAR_E2E_ENDPOINT` と一緒に使う。行末表示の状態で止まり、外部から撮影されるのを待つ |
 | `INTERLINEAR_EXTENSION_PATH=<展開した VSIX の extension/>` | ソースではなく、VSIX の中身を読み込んでテストする |
 
-単体テストも、`INTERLINEAR_REAL_LLAMA_SERVER` と `INTERLINEAR_REAL_MODEL` を指定すると、本物の llama-server で起動して訳せるかを確かめる。自動管理でセットアップ済みなら、拡張の保存領域（`globalStorage/mitsutan.interlinear/` の下の `llama.cpp/` と `models/`）にあるものを指定できる。
+単体テストも、`INTERLINEAR_REAL_LLAMA_SERVER` と `INTERLINEAR_REAL_MODEL` を指定すると、本物の llama-server で起動して訳せるかを確かめる。自動管理でセットアップ済みなら、拡張の保存領域（`globalStorage/mitsutan.interlinear/` の下の `llama.cpp/` と `models/`）にあるものを指定できる。自動管理と同じ方法でダウンロードすることもできる。
+
+```bash
+node scripts/install-real.ts /tmp/interlinear 0.8b > /tmp/interlinear.env   # 環境変数を KEY=VALUE で出力する
+set -a; . /tmp/interlinear.env; set +a
+npm test
+```
 
 ### Dev Container で統合テストを動かす準備
 
@@ -73,6 +79,14 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 | `test/integration/` | 統合テスト（`@vscode/test-electron`） |
 | `test/fixtures/` | F5 で開くサンプルと、スクリーンショット用のファイル（型チェックの対象外） |
 | `scripts/check-manifest.ts` | manifest の URL とサイズの確認 |
+| `scripts/install-real.ts` | 自動管理と同じ方法で llama.cpp とモデルをダウンロードし、実物を使うテスト用の環境変数を出力する |
+
+## CI
+
+| ワークフロー | 実行するとき | 内容 |
+|---|---|---|
+| `ci.yml` | main への push、PR | Linux と macOS で、型チェック、単体テスト、VSIX の作成、展開した VSIX での統合テストを行う。Linux で作った VSIX を成果物として残す |
+| `downloads.yml` | 毎週月曜、`src/managed/` を変えたとき | manifest のすべての URL とサイズを確かめる。Linux・macOS・Windows で、実物の llama.cpp と 0.8B のモデルをダウンロードし、起動して訳せるかを確かめる |
 
 ## 採用しなかった表示方式
 
@@ -90,5 +104,5 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
    - llama.cpp: ビルド番号と、各プラットフォームのファイル名・サイズ・SHA-256（GitHub Release の digest）。
    - Linux 版の `minGlibc`: 展開したファイルを `readelf -V --wide` で調べ、`GLIBC_` の最大のバージョンにする（arm64 と x64 でビルド環境が違う）。
    - モデル: Hugging Face のコミット・サイズ・SHA-256（LFS のハッシュ）。
-2. `npm run check:manifest` で、URL とサイズを確かめる。
+2. `npm run check:manifest` で、URL とサイズを確かめる。PR を作ると、`downloads.yml` が各 OS で実物を確かめる。
 3. ライセンスの条件が変わったら、`LICENSE_CONSENT_VERSION` を上げる。利用者に同意を取り直すため。

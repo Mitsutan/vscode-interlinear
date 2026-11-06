@@ -67,6 +67,8 @@ INTERLINEAR_E2E_ENDPOINT=http://127.0.0.1:18080 bash scripts/screenshots.sh
 
 起動中の llama-server が要る。訳の質が最も高い 8B で撮る（README にもそう書いてある）。
 
+テーマは Dark Modern にしている。行末の訳文の文字と背景のコントラスト比が 5.79 あり、青みもない（Light Modern は 3.15 と低い）。テーマを比べるときは、`INTERLINEAR_SCREENSHOT_THEMES='Dark Modern,Light Modern'` のようにカンマ区切りで指定すると、画像の名前にテーマ名が付く。
+
 ## VSIX の確認
 
 ```bash

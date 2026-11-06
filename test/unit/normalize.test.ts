@@ -66,6 +66,53 @@ test('JSDoc: タグ名・引数名・@example は残し、説明文だけ訳す'
   assert.equal(out.split('\n')[2], '@param {string} name - 名前。');
 });
 
+test('JSDoc: 入れ子の波かっこを含む型も、型ごと残して説明文だけ訳す', () => {
+  assert.deepEqual(
+    toBlocks(
+      [
+        '@param {{ error: boolean }} [contextOptions] - pass {error:true} to write to stderr',
+        '@param {{ a: { b: string } }} deep The deep one.',
+        '@returns {{ type: "element" | "literal"; value: string; }[]} The parts.',
+        '@return {{operands: string[], unknown: string[]}}',
+      ].join('\n'),
+    ),
+    [
+      { type: 'prose', prefix: '@param {{ error: boolean }} [contextOptions] - ', text: 'pass {error:true} to write to stderr' },
+      { type: 'prose', prefix: '@param {{ a: { b: string } }} deep ', text: 'The deep one.' },
+      { type: 'prose', prefix: '@returns {{ type: "element" | "literal"; value: string; }[]} ', text: 'The parts.' },
+      // 説明文がないので訳さない（型の閉じかっこだけを翻訳に回さない）
+      { type: 'verbatim', text: '@return {{operands: string[], unknown: string[]}}' },
+    ],
+  );
+});
+
+test('JSDoc: 型として認識できない型（4 段以上の入れ子、行をまたぐ型）は、型の一部を翻訳に回さない', () => {
+  assert.deepEqual(
+    toBlocks(
+      [
+        '@returns {{ a: { b: { c: string } } }} Too deep.',
+        '@returns {{',
+        '  operands: string[]',
+        '}} Spans lines.',
+        '@param {{ a: { b: { c: string } } }} name Too deep.',
+      ].join('\n'),
+    ),
+    [
+      { type: 'verbatim', text: '@returns {{ a: { b: { c: string } } }} Too deep.' },
+      { type: 'verbatim', text: '@returns {{' },
+      { type: 'verbatim', text: '  operands: string[]' },
+      { type: 'verbatim', text: '}} Spans lines.' },
+      { type: 'verbatim', text: '@param {{ a: { b: { c: string } } }} name Too deep.' },
+    ],
+  );
+});
+
+test('JSDoc: 型の位置にある {@link} はそのまま残し、続きを訳す', () => {
+  assert.deepEqual(toBlocks('@returns {@link Foo} instance, or undefined.'), [
+    { type: 'prose', prefix: '@returns {@link Foo} ', text: 'instance, or undefined.' },
+  ]);
+});
+
 test('コードフェンスと doctest は verbatim', () => {
   const blocks = toBlocks(['Intro.', '```js', 'a = 1', '```', '>>> f()', '1', '', 'After.'].join('\n'));
   assert.deepEqual(

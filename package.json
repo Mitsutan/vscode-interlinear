@@ -2,7 +2,7 @@
   "name": "interlinear",
   "displayName": "Interlinear - Local Comment Translator",
   "description": "ソースコードのコメントと、ホバーで表示されるドキュメントを、ローカルの翻訳モデル（PLaMo 3 Translate + llama.cpp）で翻訳して表示する",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "mitsutan",
   "license": "MIT",
   "icon": "images/icon.png",

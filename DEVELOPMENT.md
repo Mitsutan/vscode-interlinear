@@ -80,6 +80,7 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 | `test/fixtures/` | F5 で開くサンプルと、スクリーンショット用のファイル（型チェックの対象外） |
 | `scripts/check-manifest.ts` | manifest の URL とサイズの確認 |
 | `scripts/install-real.ts` | 自動管理と同じ方法で llama.cpp とモデルをダウンロードし、実物を使うテスト用の環境変数を出力する |
+| `images/icon.svg` | アイコンの元データ。Marketplace は SVG のアイコンを受け付けないので、PNG にしたもの（`images/icon.png`）を使う。変えたら `magick -background none -density 96 images/icon.svg -resize 256x256 -strip PNG32:images/icon.png` で作り直す |
 
 ## CI
 

@@ -32,6 +32,8 @@ await writeFile(
     'workbench.startupEditor': 'none',
     // セットアップのダイアログを VS Code の中に描画させ、仮想ディスプレイ上で撮影・キー操作できるようにする
     'window.dialogStyle': 'custom',
+    // Copilot の案内や Chat を出さない。スクリーンショットに写り込み、案内のダイアログはキー入力も奪う
+    'chat.disableAIFeatures': true,
   }),
 );
 
@@ -43,7 +45,7 @@ try {
     extensionTestsPath: path.join(root, 'dist-test', 'suite.cjs'),
     // 実モデルでの確認: INTERLINEAR_E2E_ENDPOINT=http://127.0.0.1:18080 npm run test:integration
     extensionTestsEnv: Object.fromEntries(
-      ['INTERLINEAR_E2E_ENDPOINT', 'INTERLINEAR_SCREENSHOT_DIR', 'INTERLINEAR_REAL_LLAMA_SERVER', 'INTERLINEAR_REAL_MODEL'].flatMap((k) => (process.env[k] ? [[k, process.env[k]]] : [])),
+      ['INTERLINEAR_E2E_ENDPOINT', 'INTERLINEAR_SCREENSHOT_DIR', 'INTERLINEAR_SCREENSHOT_THEMES', 'INTERLINEAR_REAL_LLAMA_SERVER', 'INTERLINEAR_REAL_MODEL'].flatMap((k) => (process.env[k] ? [[k, process.env[k]]] : [])),
     ),
     launchArgs: [
       '--no-sandbox',

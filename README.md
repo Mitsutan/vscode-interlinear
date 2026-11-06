@@ -4,15 +4,25 @@
 
 翻訳には、Preferred Networks の翻訳特化モデル [PLaMo 3 Translate](https://www.preferred.jp/ja/blog/tech/plamo-3-translate-weight-release) を [llama.cpp](https://github.com/ggml-org/llama.cpp) で動かして使います。
 
+![コメントの右側に、訳文が薄い文字で並んでいる VS Code の画面](images/screenshot-inline-all.png)
+
+この README の画像は、8B のモデルで撮影したものです。
+
 ## できること
 
 - **コメントのホバー翻訳**: コメントにマウスを置くと、訳文が表示されます。
   - 対象は、行コメント、ブロックコメント、JSDoc、Python の docstring です。
   - JSDoc の `@param name` などのタグやコード例は、そのまま残します。
+
+  ![JSDoc にマウスを置くと、タグを残したまま訳文がホバーに表示される](images/screenshot-hover.png)
+
 - **ドキュメントの翻訳**: 関数やクラスにマウスを置いたときに言語サーバーが出す説明に、訳文を追加します。標準ライブラリや `node_modules` の説明も対象です。
+
+  ![Math.random の説明の下に、その訳文が追加されている](images/screenshot-doc-hover.png)
+
 - **行末の訳文表示**: コメントの右側に、訳文を薄い文字で常に表示します。
   - 長い訳文は省略し、全文はホバーで読めます。
-  - 表示する範囲は設定で選べます。
+  - 表示する範囲は設定で選べます。既定では行コメントと1行のコメントに表示します。冒頭の画像は、JSDoc なども含める `all` にした場合です。
 - **先読みとキャッシュ**: 画面に見えているコメントを先に訳しておきます。訳文は保存され、VS Code を再起動しても残ります。
 - **訳さないもの**: ディレクティブ（`eslint-disable` など）、ライセンスヘッダ、コメントアウトされたコード、すでに出力言語で書かれたコメントは訳しません。
 

@@ -33,15 +33,26 @@ export interface TranslateRequest {
   form?: 'plain' | 'polite';
 }
 
-const SPECIAL_TOKEN_PATTERN = /<\|plamo:[a-z_]+\|>/g;
+/**
+ * 原文に特殊トークンと同じ文字列があると、llama.cpp がそれを特殊トークンとして読み、プロンプトの構造が壊れる。
+ * 語彙の特殊トークン（<|plamo:reserved:0x106|> や断片の <|plamo:begin_ / :plamo|> を含む 59 個）は
+ * すべて "<|plamo:" か ":plamo|>" を含むので、この 2 つの並びだけを崩せば足りる。
+ * 取り除かないのは、トークンについて書かれたコメントの訳文からその語が消えてしまうため。
+ * 崩すのにゼロ幅スペースを使うのは、表示を変えず、元のソースにまず現れない並びにするため。
+ * モデルはこの並びをそのまま訳文に写す（0.8B / 2B / 8B で確認）ので、cleanOutput で元に戻す。
+ */
+const ZWSP = '\u200B';
 
-/** 原文に特殊トークンが含まれているとプロンプト構造が壊れるので除去する */
-export function stripSpecialTokens(s: string): string {
-  return s.replace(SPECIAL_TOKEN_PATTERN, '');
+export function escapeSpecialTokens(s: string): string {
+  return s.replaceAll('<|plamo:', `<${ZWSP}|plamo:`).replaceAll(':plamo|>', `:plamo${ZWSP}|>`);
+}
+
+export function unescapeSpecialTokens(s: string): string {
+  return s.replaceAll(`<${ZWSP}|plamo:`, '<|plamo:').replaceAll(`:plamo${ZWSP}|>`, ':plamo|>');
 }
 
 export function buildPrompt(req: TranslateRequest): string {
-  const clean = stripSpecialTokens;
+  const clean = escapeSpecialTokens;
   let p = `${TOKEN.tag}dataset${TOKEN.msg}translation`;
 
   if (req.context) {
@@ -64,12 +75,12 @@ export function buildPrompt(req: TranslateRequest): string {
   return p;
 }
 
-/** 生成結果の末尾に停止トークンが残っていれば取り除く */
+/** 生成結果の末尾に停止トークンが残っていれば取り除き、原文から写された特殊トークンを元の形に戻す */
 export function cleanOutput(s: string): string {
   let out = s;
   for (const stop of STOP_SEQUENCES) {
     const i = out.indexOf(stop);
     if (i >= 0) out = out.slice(0, i);
   }
-  return out.trim();
+  return unescapeSpecialTokens(out.trim());
 }

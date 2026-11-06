@@ -105,12 +105,23 @@ function stripDocstring(text: string): string {
 // ---------------------------------------------------------------------------
 // prose / verbatim ブロックへの分割
 
+/**
+ * JSDoc の型 `{...}`。`{{ error: boolean }}` のような入れ子の波かっこは 3 段まで対応する。
+ * 正規表現では任意の深さを数えられないので、それより深い型や、行をまたぐ型は型として認識しない。
+ */
+const TYPE = String.raw`\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}`;
 /** タグ名 + 型 + 名前 の後ろに説明文が続くタグ */
-const NAMED_TAG =
-  /^(@(?:param|arg|argument|property|prop|template|typeParam|typeparam)\b(?:\s+\{[^}]*\})?\s+(?:\[[^\]]*\]|[\w$.]+)(?:\s+-)?)\s*(.*)$/;
-/** タグ名（+ 型）の後ろに説明文が続くタグ */
-const PROSE_TAG =
-  /^(@(?:returns?|throws|exception|deprecated|remarks|summary|description|note|todo|privateRemarks|yields?)\b(?:\s+\{[^}]*\})?(?:\s+-)?)\s*(.*)$/;
+const NAMED_TAG = new RegExp(
+  String.raw`^(@(?:param|arg|argument|property|prop|template|typeParam|typeparam)\b(?:\s+${TYPE})?\s+(?:\[[^\]]*\]|[\w$.]+)(?:\s+-)?)\s*(.*)$`,
+);
+/**
+ * タグ名（+ 型）の後ろに説明文が続くタグ。
+ * 型は省略できるが、`{` で始まるのに型として認識できないときは一致させない。
+ * 一致させると、型の一部が説明文として翻訳に回ってしまう。
+ */
+const PROSE_TAG = new RegExp(
+  String.raw`^(@(?:returns?|throws|exception|deprecated|remarks|summary|description|note|todo|privateRemarks|yields?)\b(?:\s+${TYPE}|(?!\s+\{))(?:\s+-)?)\s*(.*)$`,
+);
 const GOOGLE_SECTION =
   /^(?:Args|Arguments|Parameters|Params|Returns|Return|Yields|Raises|Attributes|Example|Examples|Note|Notes|See Also|Warns|Warnings|Other Parameters|Keyword Args|Keyword Arguments|Methods|References|Todo):\s*$/;
 const GOOGLE_ITEM = /^(\s+[\w*.]+(?:\s*\([^)]*\))?:)\s+(.+)$/;

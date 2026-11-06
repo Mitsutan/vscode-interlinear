@@ -70,12 +70,18 @@ export async function ensureFreeSpace(dir: string, bytes: number): Promise<void>
 }
 
 /**
+ * Windows では PATH の tar ではなく System32 の tar.exe を使う。Git for Windows や MSYS2 の GNU tar が
+ * PATH の先に見つかることがあり、それは zip を展開できず、`C:\…` をリモートのホスト名として扱うため。
+ */
+const TAR = process.platform === 'win32' ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
+
+/**
  * tar.gz / zip を展開する。OS の tar を使う（macOS・Linux は標準、Windows 10 以降は tar.exe が zip も扱える）。
  * 展開用のライブラリを同梱しないのは、配布サイズと依存を増やしたくないため。
  */
 export async function extractArchive(archive: string, destDir: string): Promise<void> {
   await mkdir(destDir, { recursive: true });
-  await promisify(execFile)('tar', ['-xf', archive, '-C', destDir]);
+  await promisify(execFile)(TAR, ['-xf', archive, '-C', destDir]);
 }
 
 /** ディレクトリの下からファイル名で探す */

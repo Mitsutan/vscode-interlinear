@@ -1,7 +1,7 @@
 name: Downloads
 
 # 自動管理でダウンロードする llama.cpp とモデルが、今も取得でき、各 OS で起動して訳せるかを確かめる。
-# 配布元の変更でコードを変えていなくても壊れることがあるので、定期的にも実行する。
+# 配布元の変更で、こちらのコードを変えていなくても取得できなくなることがあるので、定期的にも確かめる。
 on:
   schedule:
     - cron: '0 18 * * 0' # 毎週月曜 3:00（日本時間）
@@ -33,6 +33,9 @@ jobs:
       - run: npm run check:manifest
 
   real-server:
+    # 定期実行では動かさない。URL はビルド番号とコミットで固定し、中身も SHA-256 で検証するので、
+    # こちらが変えない限り、変わりうるのは取得できるかどうかだけで、それは manifest ジョブ（HEAD）で分かる
+    if: github.event_name != 'schedule'
     strategy:
       fail-fast: false
       matrix:

@@ -86,7 +86,7 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 | ワークフロー | 実行するとき | 内容 |
 |---|---|---|
 | `ci.yml` | main への push、PR | Linux と macOS で、型チェック、単体テスト、VSIX の作成、展開した VSIX での統合テストを行う。Linux で作った VSIX を成果物として残す |
-| `downloads.yml` | 毎週月曜、`src/managed/` を変えたとき | manifest のすべての URL とサイズを確かめる。Linux・macOS・Windows で、実物の llama.cpp と 0.8B のモデルをダウンロードし、起動して訳せるかを確かめる |
+| `downloads.yml` | 毎週月曜、`src/managed/` を変えたとき、手動 | manifest のすべての URL とサイズを、ダウンロードせずに確かめる（HEAD）。`src/managed/` を変えたときと手動で実行したときは、Linux・macOS・Windows で実物の llama.cpp と 0.8B のモデルをダウンロードし、起動して訳せるかも確かめる |
 | `release.yml` | `v*` のタグを push したとき | 下の「リリース」を参照 |
 
 ## リリース

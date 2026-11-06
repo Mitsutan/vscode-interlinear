@@ -105,10 +105,10 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 
 1. `package.json` の `version` を上げ、`CHANGELOG.md` にその版の節を書く。見出しは `## 0.2.0（2026-12-01）` のように版で始め、`（未リリース）` を外す。
 2. PR を作り、CI が通ったらマージする（main へは PR でしか変更できない）。
-3. タグを push する。
+3. マージした main を取り込んで、タグを push する（PR のブランチのコミットに付けない）。
 
    ```bash
-   git tag v0.2.0 && git push origin v0.2.0
+   git switch main && git pull && git tag v0.2.0 && git push origin v0.2.0
    ```
 
 4. `release.yml` が、タグ・`package.json`・`CHANGELOG.md` の版がそろっているかを確かめ、CI と同じテストを通した VSIX を Marketplace に公開する。続けて、その VSIX と `CHANGELOG.md` の節で GitHub Release を作る。

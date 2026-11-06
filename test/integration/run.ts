@@ -32,6 +32,8 @@ await writeFile(
     'workbench.startupEditor': 'none',
     // セットアップのダイアログを VS Code の中に描画させ、仮想ディスプレイ上で撮影・キー操作できるようにする
     'window.dialogStyle': 'custom',
+    // Copilot の案内や Chat を出さない。スクリーンショットに写り込み、案内のダイアログはキー入力も奪う
+    'chat.disableAIFeatures': true,
   }),
 );
 

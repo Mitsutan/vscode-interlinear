@@ -37,7 +37,7 @@ xvfb-run -a npm run test:integration     # ディスプレイのない Linux（�
 |---|---|
 | `INTERLINEAR_E2E_ENDPOINT=http://127.0.0.1:18080` | 起動中の llama-server で、ホバーに実際の訳文が出るか |
 | `INTERLINEAR_REAL_LLAMA_SERVER=<llama-server のパス>` と `INTERLINEAR_REAL_MODEL=<GGUF のパス>` | 自動管理モードで、本物の llama-server を拡張が起動して訳せるか |
-| `INTERLINEAR_SCREENSHOT_DIR=<ディレクトリ>` | `INTERLINEAR_E2E_ENDPOINT` と一緒に使う。行末表示の状態で止まり、外部から撮影されるのを待つ |
+| `INTERLINEAR_SCREENSHOT_DIR=<ディレクトリ>` | `INTERLINEAR_E2E_ENDPOINT` と一緒に使う。撮影する場面ごとに、`ready-<名前>` を作って止まり、外部から `<名前>.png` が置かれるのを待つ（`scripts/screenshots.sh` が使う） |
 | `INTERLINEAR_EXTENSION_PATH=<展開した VSIX の extension/>` | ソースではなく、VSIX の中身を読み込んでテストする |
 
 単体テストも、`INTERLINEAR_REAL_LLAMA_SERVER` と `INTERLINEAR_REAL_MODEL` を指定すると、本物の llama-server で起動して訳せるかを確かめる。自動管理でセットアップ済みなら、拡張の保存領域（`globalStorage/mitsutan.interlinear/` の下の `llama.cpp/` と `models/`）にあるものを指定できる。自動管理と同じ方法でダウンロードすることもできる。
@@ -54,8 +54,18 @@ npm test
 sudo apt-get install -y --no-install-recommends xvfb xauth libnss3 libatk-bridge2.0-0t64 libgtk-3-0t64 \
   libgbm1 libasound2t64 libxkbfile1 libsecret-1-0 libxss1
 # スクリーンショットを撮る場合
-sudo apt-get install -y --no-install-recommends imagemagick fonts-noto-cjk
+sudo apt-get install -y --no-install-recommends imagemagick xdotool fonts-noto-cjk
 ```
+
+### README のスクリーンショット
+
+`images/screenshot-*.png` は、`test/fixtures/showcase.ts` を実モデルで訳した画面を撮ったもの。表示や訳文が変わったら撮り直す。
+
+```bash
+INTERLINEAR_E2E_ENDPOINT=http://127.0.0.1:18080 bash scripts/screenshots.sh
+```
+
+起動中の llama-server が要る。訳の質が最も高い 8B で撮る（README にもそう書いてある）。
 
 ## VSIX の確認
 
@@ -77,9 +87,10 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 | `src/extension.ts` | エントリポイント（設定・コマンドの登録） |
 | `test/unit/` | 単体テスト（`node --test`） |
 | `test/integration/` | 統合テスト（`@vscode/test-electron`） |
-| `test/fixtures/` | F5 で開くサンプルと、スクリーンショット用のファイル（型チェックの対象外） |
+| `test/fixtures/` | F5 で開くサンプルと、スクリーンショット用のファイル（型チェックの対象外）。`showcase.ts` は README の画像用 |
 | `scripts/check-manifest.ts` | manifest の URL とサイズの確認 |
 | `scripts/install-real.ts` | 自動管理と同じ方法で llama.cpp とモデルをダウンロードし、実物を使うテスト用の環境変数を出力する |
+| `scripts/screenshots.sh` | 仮想ディスプレイで VS Code を動かし、README のスクリーンショットを撮る |
 | `images/icon.svg` | アイコンの元データ。Marketplace は SVG のアイコンを受け付けないので、PNG にしたもの（`images/icon.png`）を使う。変えたら `magick -background none -density 96 images/icon.svg -resize 256x256 -strip PNG32:images/icon.png` で作り直す |
 
 ## CI

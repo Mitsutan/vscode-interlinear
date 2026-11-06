@@ -104,6 +104,24 @@ async function openTs(content: string): Promise<vscode.TextDocument> {
 const config = () => vscode.workspace.getConfiguration('interlinear');
 const setConfig = (key: string, value: unknown) => config().update(key, value, vscode.ConfigurationTarget.Global);
 
+/** 開いているエディターをすべて閉じる */
+async function closeAllEditors(): Promise<void> {
+  const count = () => vscode.window.tabGroups.all.reduce((n, g) => n + g.tabs.length, 0);
+  for (let n = count(); n > 0; ) {
+    // 単に閉じないのは、未保存の無題のドキュメントで保存を確かめるダイアログが出て、テストからは答えられないため
+    await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+    const left = count();
+    if (left >= n) throw new Error(`エディターを閉じられない（残り ${left}）`);
+    n = left;
+  }
+}
+
+/** カーソルを置いてホバーを開く（撮影用。内容の確認は hoverText で行う） */
+async function showHoverAt(editor: vscode.TextEditor, pos: vscode.Position): Promise<void> {
+  editor.selection = new vscode.Selection(pos, pos);
+  await vscode.commands.executeCommand('editor.action.showHover');
+}
+
 // ---------------------------------------------------------------------------
 
 const FIXTURE = [
@@ -486,26 +504,90 @@ export async function run(): Promise<void> {
     ]);
   }
 
-  // 見た目の確認用: 実モデルで訳した状態を表示し、外から撮影されるのを待つ（INTERLINEAR_SCREENSHOT_DIR を指定したときだけ）
+  // 実モデルで訳した状態を表示し、外から撮影されるのを待つ（INTERLINEAR_SCREENSHOT_DIR を指定したときだけ）。
+  // 撮影する側（scripts/screenshots.sh）は、ready-<名前> ができたら画面を撮って <名前>.png を置く
   const shotDir = process.env.INTERLINEAR_SCREENSHOT_DIR;
   if (e2eEndpoint && shotDir) {
+    const shoot = async (name: string) => {
+      await sleep(1000);
+      await writeFile(path.join(shotDir, `ready-${name}`), '');
+      await waitFor(`screenshot (${name})`, () => existsSync(path.join(shotDir, `${name}.png`)), 30_000);
+    };
+    // 拡張の場所（ext.extensionPath）から探さないのは、INTERLINEAR_EXTENSION_PATH で VSIX の中身を読み込むと、そこに test/ がないため
+    const fixture = (name: string) => vscode.Uri.file(path.resolve(__dirname, '..', 'test', 'fixtures', name));
+    const showInline = async (uri: vscode.Uri, mode: 'short' | 'all') => {
+      await setConfig('inlineTranslation', mode);
+      await sleep(500);
+      await waitFor(`translations (${mode})`, () => api.service.queue.pending === 0 && api.inlineLines(uri).length > 0, 120_000);
+    };
+
     tests.push([
-      'スクリーンショット: test/fixtures/edge-cases.ts の行末表示',
+      'スクリーンショット: test/fixtures/edge-cases.ts の行末表示（見た目の確認用）',
       async () => {
         await setConfig('endpoint', e2eEndpoint);
-        // 拡張の場所（ext.extensionPath）から探さないのは、INTERLINEAR_EXTENSION_PATH で VSIX の中身を読み込むと、そこに test/ がないため
-        const sample = vscode.Uri.file(path.resolve(__dirname, '..', 'test', 'fixtures', 'edge-cases.ts'));
-        const sampleDoc = await vscode.workspace.openTextDocument(sample);
-        await vscode.window.showTextDocument(sampleDoc);
+        const sample = fixture('edge-cases.ts');
+        await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(sample));
         for (const mode of ['short', 'all'] as const) {
-          await setConfig('inlineTranslation', mode);
-          await sleep(500);
-          await waitFor(`translations (${mode})`, () => api.service.queue.pending === 0 && api.inlineLines(sample).length > 0, 120_000);
-          await sleep(1000);
-          await writeFile(path.join(shotDir, `ready-${mode}`), '');
-          await waitFor(`screenshot (${mode})`, () => existsSync(path.join(shotDir, `inline-${mode}.png`)), 30_000);
+          await showInline(sample, mode);
+          await shoot(`inline-${mode}`);
         }
         await setConfig('inlineTranslation', 'off');
+      },
+    ]);
+
+    tests.push([
+      'スクリーンショット: test/fixtures/showcase.ts の行末表示とホバー（README 用）',
+      async () => {
+        await setConfig('endpoint', e2eEndpoint);
+        // 前のテストのタブ、通知、サイドバーを写さない
+        await closeAllEditors();
+        await vscode.commands.executeCommand('workbench.action.closeSidebar');
+        await vscode.commands.executeCommand('workbench.action.closePanel');
+        await vscode.commands.executeCommand('notifications.clearAll');
+        const look: Array<[section: string, key: string, value: unknown]> = [
+          ['editor', 'minimap.enabled', false],
+          ['editor', 'lightbulb.enabled', 'off'],
+          ['breadcrumbs', 'enabled', false], // 開発用のフォルダのパスを写さない
+          ['git', 'decorations.enabled', false],
+          // 撮影用に広げたウィンドウの幅に合わせ、訳文をなるべく省略せずに見せる
+          ['interlinear', 'inlineMaxWidth', 170],
+        ];
+        for (const [section, key, value] of look) {
+          await vscode.workspace.getConfiguration(section).update(key, value, vscode.ConfigurationTarget.Global);
+        }
+        const sample = fixture('showcase.ts');
+        const editor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(sample));
+        const lineOf = (text: string) => editor.document.getText().split('\n').findIndex((l) => l.includes(text));
+        try {
+          // README では JSDoc にも訳文が並ぶ all を見せる（既定の short との違いは README に書く）
+          await showInline(sample, 'all');
+          await shoot('readme-inline-all');
+          await setConfig('inlineTranslation', 'short');
+
+          const comment = new vscode.Position(lineOf('The delay doubles'), 8);
+          let text = '';
+          await waitFor('comment hover', () => /[\p{Script=Hiragana}\p{Script=Han}]/u.test(text), 60_000, async () => {
+            text = await hoverText(editor.document, comment.line, comment.character);
+          });
+          await showHoverAt(editor, comment);
+          await shoot('readme-hover');
+
+          // 説明の短い Math.random にするのは、ホバーの高さに上限があり、長い説明だと訳文がスクロールの先に隠れるため
+          const random = new vscode.Position(lineOf('Math.random'), editor.document.lineAt(lineOf('Math.random')).text.indexOf('random') + 2);
+          text = '';
+          await waitFor('documentation hover', () => /ローカル翻訳/.test(text), 120_000, async () => {
+            text = await hoverText(editor.document, random.line, random.character);
+          });
+          // 開き直すのは、コマンドで開いたホバーはカーソルを動かしても閉じず、次のホバーが出ないため
+          await closeAllEditors();
+          await showHoverAt(await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(sample)), random);
+          await shoot('readme-doc-hover');
+        } finally {
+          await setConfig('inlineTranslation', 'off');
+          for (const [section, key] of look) {
+            await vscode.workspace.getConfiguration(section).update(key, undefined, vscode.ConfigurationTarget.Global);
+          }
+        }
       },
     ]);
   }

@@ -104,7 +104,7 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 ## リリース
 
 1. `package.json` の `version` を上げ、`CHANGELOG.md` にその版の節を書く。見出しは `## 0.2.0（2026-12-01）` のように版で始め、`（未リリース）` を外す。
-2. main に push し、CI が通ったことを確かめる。
+2. PR を作り、CI が通ったらマージする（main へは PR でしか変更できない）。
 3. タグを push する。
 
    ```bash

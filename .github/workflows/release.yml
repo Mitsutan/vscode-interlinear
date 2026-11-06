@@ -1,0 +1,74 @@
+name: Release
+
+# v0.1.0 のようなタグを push すると、CI と同じテストを通した VSIX を Marketplace に公開し、GitHub Release を作る。
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: タグ・package.json・CHANGELOG.md の版がそろっているか
+        run: |
+          version=$(jq -r .version package.json)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::タグ（$GITHUB_REF_NAME）と package.json の版（$version）が一致しません"
+            exit 1
+          fi
+          heading=$(grep -m1 -F "## $version" CHANGELOG.md || true)
+          if [ -z "$heading" ] || [[ "$heading" == *未リリース* ]]; then
+            echo "::error::CHANGELOG.md に $version の節がないか、見出しが（未リリース）のままです"
+            exit 1
+          fi
+
+  test:
+    needs: check
+    uses: ./.github/workflows/ci.yml
+
+  marketplace:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Marketplace の Trusted Publishing（OIDC）
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          name: vsix
+      # プレリリースかどうかは VSIX に書き込まれていて（scripts/package.ts）、Marketplace はそれに従う
+      - run: npx vsce publish --oidc --packagePath interlinear-*.vsix
+
+  # Marketplace と別のジョブにするのは、こちらだけが失敗したときに、公開済みの版を公開し直そうとせずにやり直せるようにするため
+  github-release:
+    needs: marketplace
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # GitHub Release を作る
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: vsix
+      - name: GitHub Release を作る
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          vsix=interlinear-$version.vsix
+          # CHANGELOG.md のこの版の節を、リリースノートにする
+          awk -v h="## $version" 'index($0, h) == 1 { on = 1; next } on && /^## / { exit } on' CHANGELOG.md > notes.md
+          flags=()
+          manifest=$(unzip -p "$vsix" extension.vsixmanifest)
+          if [[ $manifest == *Microsoft.VisualStudio.Code.PreRelease* ]]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" "$vsix" --verify-tag --title "$GITHUB_REF_NAME" --notes-file notes.md "${flags[@]}"

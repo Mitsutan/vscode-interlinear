@@ -253,7 +253,7 @@
     "typecheck": "tsc -p .",
     "test": "node --test \"test/unit/**/*.test.ts\"",
     "test:integration": "node esbuild.mjs --tests && node test/integration/run.ts",
-    "package": "node esbuild.mjs --production && vsce package --no-dependencies",
+    "package": "node esbuild.mjs --production && node scripts/package.ts",
     "check:manifest": "node scripts/check-manifest.ts"
   },
   "devDependencies": {
@@ -261,7 +261,7 @@
     "@types/vscode": "1.100.0",
     "@vscode/test-electron": "3.1.0",
     "@vscode/tree-sitter-wasm": "0.3.1",
-    "@vscode/vsce": "4.0.0",
+    "@vscode/vsce": "4.1.0",
     "esbuild": "0.28.2",
     "typescript": "7.0.2"
   },

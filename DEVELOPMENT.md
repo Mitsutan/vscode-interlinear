@@ -18,7 +18,7 @@ npm install
 npm run typecheck          # 型チェック
 npm test                   # 単体テスト（Node の型ストリップで .ts を直接実行。Node 23.6 以上）
 npm run build              # dist/extension.cjs と dist/wasm/ を生成
-npm run package            # 配布用にビルドして VSIX を作る（interlinear-<版>.vsix）
+npm run package            # 配布用にビルドして VSIX を作る（interlinear-<版>.vsix。マイナー版が奇数ならプレリリース）
 npm run check:manifest     # 自動管理でダウンロードするファイルの URL とサイズを確かめる
 ```
 
@@ -87,6 +87,32 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 |---|---|---|
 | `ci.yml` | main への push、PR | Linux と macOS で、型チェック、単体テスト、VSIX の作成、展開した VSIX での統合テストを行う。Linux で作った VSIX を成果物として残す |
 | `downloads.yml` | 毎週月曜、`src/managed/` を変えたとき | manifest のすべての URL とサイズを確かめる。Linux・macOS・Windows で、実物の llama.cpp と 0.8B のモデルをダウンロードし、起動して訳せるかを確かめる |
+| `release.yml` | `v*` のタグを push したとき | 下の「リリース」を参照 |
+
+## リリース
+
+1. `package.json` の `version` を上げ、`CHANGELOG.md` にその版の節を書く。見出しは `## 0.2.0（2026-12-01）` のように版で始め、`（未リリース）` を外す。
+2. main に push し、CI が通ったことを確かめる。
+3. タグを push する。
+
+   ```bash
+   git tag v0.2.0 && git push origin v0.2.0
+   ```
+
+4. `release.yml` が、タグ・`package.json`・`CHANGELOG.md` の版がそろっているかを確かめ、CI と同じテストを通した VSIX を Marketplace に公開する。続けて、その VSIX と `CHANGELOG.md` の節で GitHub Release を作る。
+
+**版の付け方**: マイナー版が奇数ならプレリリース、偶数なら正式版（例: 0.1.x はプレリリース、0.2.x は正式版）。`npm run package`（`scripts/package.ts`）が版から決めて VSIX に書き込む。プレリリースと正式版で同じ版は使えない。
+
+**Marketplace への認証**: Trusted Publishing（OIDC）を使い、トークンは保存しない。publisher `mitsutan` の管理画面（Trusted Publishing）で、次のポリシーを登録する。
+
+| 項目 | 値 |
+|---|---|
+| Repository owner | `Mitsutan` |
+| Repository | `vscode-interlinear` |
+| Workflow | `release.yml` |
+| Environment | （空） |
+
+ワークフローのファイル名を変えたら、ポリシーも直す。非公開リポジトリでは、ポリシーを作ってから 48 時間以内にワークフローを実行しないと使えなくなる。
 
 ## 採用しなかった表示方式
 

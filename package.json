@@ -185,8 +185,8 @@
         },
         "interlinear.targetLanguage": {
           "type": "string",
-          "default": "ja",
-          "description": "出力言語（ISO 639-1 コード。例: ja, en, zh, ko）。"
+          "default": "",
+          "description": "出力言語（ISO 639-1 コード。例: ja, en, zh, ko）。空なら VS Code の表示言語に合わせる（日本語なら ja、それ以外は en）。"
         },
         "interlinear.sourceLanguage": {
           "type": "string",

@@ -76,7 +76,7 @@ llama-server -m plamo-3-translate-2b-Q4_K_M.gguf -c 8192 -np 2 --port 18080
 | `interlinear.translateDocumentation` | `true` | ホバーで出るドキュメントも翻訳する |
 | `interlinear.inlineTranslation` | `short` | コメントの右側に訳文を出す範囲<br>`off`: 出さない<br>`short`: 行コメントと1行のコメント<br>`all`: JSDoc なども含める |
 | `interlinear.inlineMaxWidth` | `120` | コードと右側の訳文を合わせた1行の表示幅（全角は2桁）。編集領域の幅に合わせます |
-| `interlinear.targetLanguage` | `ja` | 出力言語（`en`、`zh`、`ko` など） |
+| `interlinear.targetLanguage` | （空） | 出力言語（`ja`、`en`、`zh`、`ko` など）。空なら VS Code の表示言語に合わせます（日本語なら `ja`、それ以外は `en`）。VS Code を英語で表示していて日本語に訳したい場合は `ja` を指定します |
 | `interlinear.sourceLanguage` | （空） | 入力言語。空ならモデルが判定します |
 | `interlinear.form` | `plain` | 日本語の文体<br>`plain`: 常体<br>`polite`: 敬体<br>`none`: 指定しない |
 | `interlinear.useContext` | `true` | ファイル名と関連するコード行を、翻訳の参考情報として渡す |

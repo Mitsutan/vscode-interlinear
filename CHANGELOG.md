@@ -1,5 +1,9 @@
 # Changelog
 
+## 未リリース
+
+- 出力言語（`interlinear.targetLanguage`）の既定値を、VS Code の表示言語に合わせるようにした（日本語なら `ja`、それ以外は `en`）。VS Code を英語で表示していて日本語に訳したい場合は、`interlinear.targetLanguage` を `ja` にする
+
 ## 0.1.1（2026-11-06）
 
 - アイコンを付けた

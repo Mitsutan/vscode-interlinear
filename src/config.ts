@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { defaultTargetLanguage } from './core/language.ts';
 import type { GlossaryEntry } from './core/pfml3.ts';
 import type { InlineMode } from './editor/inlineDecorator.ts';
 import { MODELS, MODEL_SIZES, type ModelSize } from './managed/manifest.ts';
@@ -63,7 +64,7 @@ export function readConfig(): ExtensionConfig {
     llamaServerPath: c.get('server.llamaServerPath', '').trim(),
     modelPath: c.get('server.modelPath', '').trim(),
     endpoint: c.get('endpoint', 'http://127.0.0.1:18080').trim(),
-    targetLang: c.get('targetLanguage', 'ja').trim() || 'ja',
+    targetLang: c.get('targetLanguage', '').trim() || defaultTargetLanguage(vscode.env.language),
     sourceLang: c.get('sourceLanguage', '').trim(),
     form: c.get('form', 'plain'),
     useContext: c.get('useContext', true),

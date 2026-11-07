@@ -34,6 +34,8 @@ await writeFile(
     'window.dialogStyle': 'custom',
     // Copilot の案内や Chat を出さない。スクリーンショットに写り込み、案内のダイアログはキー入力も奪う
     'chat.disableAIFeatures': true,
+    // テスト用の VS Code は英語表示で、出力言語の既定値が en になる。フィクスチャは英語のコメントなので、訳す対象にするため ja にする
+    'interlinear.targetLanguage': 'ja',
   }),
 );
 

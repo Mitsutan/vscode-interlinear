@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { defaultTargetLanguage } from './core/language.ts';
 import type { GlossaryEntry } from './core/pfml3.ts';
 import type { InlineMode } from './editor/inlineDecorator.ts';
 import { MODELS, MODEL_SIZES, type ModelSize } from './managed/manifest.ts';
@@ -63,7 +64,7 @@ export function readConfig(): ExtensionConfig {
     llamaServerPath: c.get('server.llamaServerPath', '').trim(),
     modelPath: c.get('server.modelPath', '').trim(),
     endpoint: c.get('endpoint', 'http://127.0.0.1:18080').trim(),
-    targetLang: c.get('targetLanguage', 'ja').trim() || 'ja',
+    targetLang: c.get('targetLanguage', '').trim() || defaultTargetLanguage(vscode.env.language),
     sourceLang: c.get('sourceLanguage', '').trim(),
     form: c.get('form', 'plain'),
     useContext: c.get('useContext', true),
@@ -73,10 +74,16 @@ export function readConfig(): ExtensionConfig {
   };
 }
 
+/** 画面に出すモデルの名前（例: 2B (1.8 GB)） */
+export function modelLabel(size: ModelSize): string {
+  const m = MODELS[size];
+  return vscode.l10n.t('{0} ({1} GB)', m.label, (m.bytes / 1e9).toFixed(1));
+}
+
 /** エラーメッセージなどに出す、サーバーの呼び名 */
 export function serverLabel(c: ExtensionConfig): string {
   if (c.serverMode === 'external') return c.endpoint;
-  return c.modelPath ? `自動管理・${c.modelPath}` : `自動管理・${MODELS[c.model].label}`;
+  return vscode.l10n.t('Managed: {0}', c.modelPath || modelLabel(c.model));
 }
 
 export function toTranslatorSettings(c: ExtensionConfig): TranslatorSettings {

@@ -228,7 +228,7 @@ test('service: 応答したのが llama-server でなければ、その旨を伝
   const service = makeService(backend);
   const state = await service.checkServer();
   assert.equal(state.status, 'down');
-  assert.match(state.status === 'down' ? state.message : '', /llama-server ではありません/);
+  assert.match(state.status === 'down' ? state.message : '', /is not llama-server/);
 });
 
 test('service: 設定変更前に始まった接続確認の結果は使わない', async () => {

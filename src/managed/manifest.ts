@@ -4,6 +4,7 @@
  *
  * 更新するときは `npm run check:manifest` で URL とサイズを確かめる。
  */
+import * as l10n from '@vscode/l10n';
 
 export const LLAMA_BUILD = 'b11700';
 
@@ -62,9 +63,11 @@ export function llamaAssetFor(key: string = platformKey()): LlamaAsset | undefin
  */
 export function llamaIncompatibility(asset: LlamaAsset, glibc: string | undefined): string | undefined {
   if (!asset.minGlibc) return undefined;
-  if (!glibc) return '自動で入れる llama.cpp は glibc を使う Linux 向けのため、この環境（Alpine などの musl）では動きません';
+  if (!glibc) {
+    return l10n.t('The automatically installed llama.cpp is built for glibc-based Linux and does not run in this environment (musl, such as Alpine)');
+  }
   if (compareVersions(glibc, asset.minGlibc) < 0) {
-    return `自動で入れる llama.cpp には glibc ${asset.minGlibc} 以上が必要です（この環境は ${glibc}）`;
+    return l10n.t('The automatically installed llama.cpp requires glibc {0} or later (this environment has {1})', asset.minGlibc, glibc);
   }
   return undefined;
 }
@@ -84,12 +87,12 @@ export const MODEL_SIZES: readonly ModelSize[] = ['0.8b', '2b', '8b'];
 
 export interface ModelInfo extends DownloadAsset {
   size: ModelSize;
+  /** パラメーター数（例: 2B） */
   label: string;
-  detail: string;
 }
 
 /** Hugging Face のコミットを指定した URL にして、同じ名前のファイルが差し替えられても影響を受けないようにする */
-const model = (size: ModelSize, revision: string, bytes: number, sha256: string, label: string, detail: string): ModelInfo => {
+const model = (size: ModelSize, revision: string, bytes: number, sha256: string): ModelInfo => {
   const name = `plamo-3-translate-${size}-Q4_K_M.gguf`;
   return {
     size,
@@ -97,36 +100,14 @@ const model = (size: ModelSize, revision: string, bytes: number, sha256: string,
     name,
     bytes,
     sha256,
-    label,
-    detail,
+    label: size.toUpperCase(),
   };
 };
 
 export const MODELS: Readonly<Record<ModelSize, ModelInfo>> = {
-  '0.8b': model(
-    '0.8b',
-    'dbeb0856cb0b004b484f190bb71dd65876297013',
-    573123200,
-    '923b2f28a9856de1b8b3b610a7e59ded0b14d007466fd5dd526e6a9ecaadafdd',
-    '0.8B（0.6 GB）',
-    '軽量。GPU のない環境向け。2B より誤訳や文体の乱れが多い',
-  ),
-  '2b': model(
-    '2b',
-    '232fbd7916519edecddfdae0beae7e76fe70453f',
-    1807199392,
-    'f36d0813dd95573a852ab5d76e374c543632d9e292929e922bcdbf7e53b494e0',
-    '2B（1.8 GB）',
-    '推奨。Apple Silicon ならコメント1件あたり 1 秒未満',
-  ),
-  '8b': model(
-    '8b',
-    '2234f168757f570714b333049c9d018161ec5277',
-    5280442080,
-    '47a04e86a67bcc352fa186f01159060aae594b73993e1d49dbfc0ef0081d01ad',
-    '8B（5.3 GB）',
-    '高品質。2B の約 3 倍の時間がかかる。メモリに余裕のある環境向け',
-  ),
+  '0.8b': model('0.8b', 'dbeb0856cb0b004b484f190bb71dd65876297013', 573123200, '923b2f28a9856de1b8b3b610a7e59ded0b14d007466fd5dd526e6a9ecaadafdd'),
+  '2b': model('2b', '232fbd7916519edecddfdae0beae7e76fe70453f', 1807199392, 'f36d0813dd95573a852ab5d76e374c543632d9e292929e922bcdbf7e53b494e0'),
+  '8b': model('8b', '2234f168757f570714b333049c9d018161ec5277', 5280442080, '47a04e86a67bcc352fa186f01159060aae594b73993e1d49dbfc0ef0081d01ad'),
 };
 
 export const LICENSE_URL = 'https://plamo.preferredai.jp/info/plamo-community-license-ja';

@@ -2,8 +2,9 @@
  * 翻訳サーバーの用意（自動管理 / 外部サーバーの切り替え）と、初回セットアップの流れ。
  */
 import * as vscode from 'vscode';
-import { SECTION, type ExtensionConfig } from '../config.ts';
+import { SECTION, modelLabel, type ExtensionConfig } from '../config.ts';
 import { LlamaClient } from '../core/llama-client.ts';
+import { formatList } from '../l10n.ts';
 import { Installer } from '../managed/installer.ts';
 import { ManagedServer, NotReadyError } from '../managed/managedServer.ts';
 import {
@@ -20,7 +21,18 @@ const CONSENT_KEY = 'licenseConsent';
 const PROMPT_DISMISSED_KEY = 'setupPromptDismissed';
 
 const unsupportedMessage = (reason: string) =>
-  `${reason}。llama-server を用意して設定 ${SECTION}.server.llamaServerPath で指定するか、外部サーバーを使ってください`;
+  vscode.l10n.t('{0}. Provide your own llama-server and set it in {1}, or use an external server.', reason, `${SECTION}.server.llamaServerPath`);
+
+function modelDetail(size: ModelSize): string {
+  switch (size) {
+    case '0.8b':
+      return vscode.l10n.t('Lightweight. For machines without a GPU. More mistranslations and style inconsistencies than 2B');
+    case '2b':
+      return vscode.l10n.t('Recommended. Under 1 second per comment on Apple Silicon');
+    case '8b':
+      return vscode.l10n.t('Highest quality. Takes about 3 times as long as 2B. For machines with plenty of memory');
+  }
+}
 
 export class ServerController implements vscode.Disposable {
   readonly output: vscode.LogOutputChannel;
@@ -95,11 +107,11 @@ export class ServerController implements vscode.Disposable {
     if (this.prompted || !c.enabled || !this.needsSetupValue) return;
     if (this.context.globalState.get<boolean>(PROMPT_DISMISSED_KEY)) return;
     this.prompted = true;
-    const setup = 'セットアップ';
-    const external = '外部サーバーを使う';
-    const never = '今後表示しない';
+    const setup = vscode.l10n.t('Set Up');
+    const external = vscode.l10n.t('Use External Server');
+    const never = vscode.l10n.t("Don't Show Again");
     const picked = await vscode.window.showInformationMessage(
-      `コメントを翻訳するには、翻訳モデル（${MODELS[c.model].label}）のダウンロードが必要です。`,
+      vscode.l10n.t('Translating comments requires downloading a translation model ({0}).', modelLabel(c.model)),
       setup,
       external,
       never,
@@ -119,22 +131,25 @@ export class ServerController implements vscode.Disposable {
   async runSetup(c: ExtensionConfig): Promise<boolean> {
     const unsupported = c.llamaServerPath ? undefined : this.installer.unsupportedReason;
     if (unsupported) {
-      void vscode.window.showErrorMessage(`${unsupportedMessage(unsupported)}。`);
+      void vscode.window.showErrorMessage(unsupportedMessage(unsupported));
       return false;
     }
 
     const items = await Promise.all(
       MODEL_SIZES.map(async (size) => ({
-        label: `${MODELS[size].label}${size === '2b' ? '　推奨' : ''}`,
-        description: (await this.installer.isModelInstalled(size)) ? 'ダウンロード済み' : '',
-        detail: MODELS[size].detail,
+        label: size === '2b' ? vscode.l10n.t('{0} — Recommended', modelLabel(size)) : modelLabel(size),
+        description: (await this.installer.isModelInstalled(size)) ? vscode.l10n.t('Downloaded') : '',
+        detail: modelDetail(size),
         picked: size === c.model,
         size,
       })),
     );
     const pick = c.modelPath
       ? undefined
-      : await vscode.window.showQuickPick(items, { title: 'Interlinear: 翻訳モデルを選ぶ', placeHolder: '大きいほど訳は良くなりますが、遅く、メモリも多く使います' });
+      : await vscode.window.showQuickPick(items, {
+          title: vscode.l10n.t('Interlinear: Choose a Translation Model'),
+          placeHolder: vscode.l10n.t('Larger models translate better, but are slower and use more memory'),
+        });
     if (!c.modelPath && !pick) return false;
     const size: ModelSize = pick?.size ?? c.model;
 
@@ -142,7 +157,7 @@ export class ServerController implements vscode.Disposable {
 
     try {
       await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: 'Interlinear のセットアップ', cancellable: true },
+        { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Interlinear Setup'), cancellable: true },
         async (progress, token) => {
           const abort = new AbortController();
           token.onCancellationRequested(() => abort.abort());
@@ -150,42 +165,50 @@ export class ServerController implements vscode.Disposable {
           const model = c.modelPath || (await this.installer.isModelInstalled(size)) ? undefined : MODELS[size];
           const total = (llama?.bytes ?? 0) + (model?.bytes ?? 0);
           let done = 0;
-          const report = (label: string, base: number, bytes: number) => (p: { received: number }) => {
+          const mb = (n: number) => (n / 1e6).toFixed(0);
+          const report = (message: (received: string) => string, base: number) => (p: { received: number }) => {
             const now = base + p.received;
             progress.report({
-              message: `${label}をダウンロード中… ${(p.received / 1e6).toFixed(0)} / ${(bytes / 1e6).toFixed(0)} MB`,
+              message: message(mb(p.received)),
               increment: total > 0 ? ((now - done) / total) * 100 : undefined,
             });
             done = now;
           };
           if (llama) {
-            this.output.info(`ダウンロード: ${llama.url}`);
-            await this.installer.installLlama({ signal: abort.signal, onProgress: report('llama.cpp ', 0, llama.bytes) });
+            this.output.info(`Downloading ${llama.url}`);
+            await this.installer.installLlama({
+              signal: abort.signal,
+              onProgress: report((received) => vscode.l10n.t('Downloading llama.cpp… {0} / {1} MB', received, mb(llama.bytes)), 0),
+            });
           }
           if (model) {
-            this.output.info(`ダウンロード: ${model.url}`);
+            this.output.info(`Downloading ${model.url}`);
             await this.installer.installModel(size, {
               signal: abort.signal,
-              onProgress: report(`翻訳モデル（${model.label}）`, llama?.bytes ?? 0, model.bytes),
+              onProgress: report(
+                (received) =>
+                  vscode.l10n.t('Downloading the translation model ({0})… {1} / {2} MB', modelLabel(size), received, mb(model.bytes)),
+                llama?.bytes ?? 0,
+              ),
             });
           }
         },
       );
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
-        void vscode.window.showInformationMessage('セットアップを取り消しました');
+        void vscode.window.showInformationMessage(vscode.l10n.t('Setup canceled'));
         return false;
       }
       const message = e instanceof Error ? e.message : String(e);
       this.output.error(message);
-      void vscode.window.showErrorMessage(`セットアップに失敗しました: ${message}`);
+      void vscode.window.showErrorMessage(vscode.l10n.t('Setup failed: {0}', message));
       return false;
     }
 
     const config = vscode.workspace.getConfiguration(SECTION);
     if (size !== c.model) await config.update('server.model', size, vscode.ConfigurationTarget.Global);
     if (c.serverMode !== 'managed') await config.update('server.mode', 'managed', vscode.ConfigurationTarget.Global);
-    void vscode.window.showInformationMessage('セットアップが完了しました。コメントにマウスを置くと訳文が表示されます。');
+    void vscode.window.showInformationMessage(vscode.l10n.t('Setup complete. Hover over a comment to see its translation.'));
     return true;
   }
 
@@ -194,17 +217,20 @@ export class ServerController implements vscode.Disposable {
     const installed: ModelSize[] = [];
     for (const size of MODEL_SIZES) if (await this.installer.isModelInstalled(size)) installed.push(size);
     if (installed.length === 0) {
-      void vscode.window.showInformationMessage('ダウンロード済みのモデルはありません');
+      void vscode.window.showInformationMessage(vscode.l10n.t('No models have been downloaded'));
       return [];
     }
     const picks = await vscode.window.showQuickPick(
-      installed.map((size) => ({ label: MODELS[size].label, description: size === c.model ? '使用中' : '', size })),
-      { canPickMany: true, title: '削除するモデルを選ぶ' },
+      installed.map((size) => ({ label: modelLabel(size), description: size === c.model ? vscode.l10n.t('In use') : '', size })),
+      { canPickMany: true, title: vscode.l10n.t('Choose Models to Remove') },
     );
     if (!picks || picks.length === 0) return [];
-    const ok = '削除する';
+    const ok = vscode.l10n.t('Remove');
     const confirm = await vscode.window.showWarningMessage(
-      `${picks.map((p) => p.label).join('、')} を削除しますか？もう一度使うにはダウンロードし直す必要があります。`,
+      vscode.l10n.t(
+        'Remove {0}? To use a removed model again, you will need to download it again.',
+        formatList(picks.map((p) => p.label)),
+      ),
       { modal: true },
       ok,
     );
@@ -216,26 +242,31 @@ export class ServerController implements vscode.Disposable {
 
   private async ensureConsent(): Promise<boolean> {
     if (this.context.globalState.get<string>(CONSENT_KEY) === LICENSE_CONSENT_VERSION) return true;
-    const accept = '同意してダウンロード';
-    const read = 'ライセンスを読む';
+    const accept = vscode.l10n.t('Agree and Download');
+    const read = vscode.l10n.t('Read License');
+    const paragraphs = [
+      [
+        vscode.l10n.t('The translation model PLaMo 3 Translate (Preferred Networks) is provided under the PLaMo Community License.'),
+        vscode.l10n.t('• Personal use and non-commercial use, including academic use: free, no registration required'),
+        vscode.l10n.t('• Commercial use: prior registration required (a separate agreement is required if revenue exceeds JPY 1 billion)'),
+      ].join('\n'),
+      vscode.l10n.t(
+        'Files are downloaded from Hugging Face (pfnet) and GitHub (llama.cpp) and verified with SHA-256. Translation runs on this computer, and your code is never sent anywhere.',
+      ),
+    ];
     // リモートのウィンドウでも、拡張がローカル側（ui）で動いていれば翻訳もローカルで行う
-    const remote =
-      vscode.env.remoteName && this.context.extension.extensionKind === vscode.ExtensionKind.Workspace
-        ? `\n\nこの拡張はリモート環境（${vscode.env.remoteName}）で動いているため、モデルはリモート側に保存され、翻訳もリモート側で行います。GPU を使えない環境では遅くなります（ホストで llama-server を動かしている場合は、外部サーバーを使う設定にできます）。`
-        : '';
+    if (vscode.env.remoteName && this.context.extension.extensionKind === vscode.ExtensionKind.Workspace) {
+      paragraphs.push(
+        vscode.l10n.t(
+          'This extension is running in the remote environment ({0}), so the model is stored and translation runs on the remote side. It will be slow without a GPU (if you run llama-server on the host, you can use it as an external server).',
+          vscode.env.remoteName,
+        ),
+      );
+    }
     for (;;) {
       const picked = await vscode.window.showInformationMessage(
-        '翻訳モデルのライセンスへの同意',
-        {
-          modal: true,
-          detail:
-            '翻訳モデル PLaMo 3 Translate（Preferred Networks）は PLaMo Community License で提供されています。\n' +
-            '・個人利用、学術を含む非商用利用: 無償、登録不要\n' +
-            '・商用利用: 事前の登録が必要（売上 10 億円超は別途契約）\n\n' +
-            'ダウンロード元は Hugging Face（pfnet）と GitHub（llama.cpp）で、ファイルは SHA-256 で検証します。' +
-            '翻訳はこのコンピューター上で行い、コードを外部に送信しません。' +
-            remote,
-        },
+        vscode.l10n.t('Translation Model License Agreement'),
+        { modal: true, detail: paragraphs.join('\n\n') },
         accept,
         read,
       );

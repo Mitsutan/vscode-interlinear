@@ -4,6 +4,9 @@
 #
 #   INTERLINEAR_E2E_ENDPOINT=http://127.0.0.1:18080 bash scripts/screenshots.sh
 #
+# 既定では英語の README 用（images/screenshot-*.en.png）だけを撮る。日本語の README 用（images/screenshot-*.png）も
+# 撮るときは INTERLINEAR_SCREENSHOT_LANGS=en,ja を指定する（DEVELOPMENT.md の「README のスクリーンショット」）。
+#
 # 起動中の llama-server（実モデル）が要る。xvfb-run、ImageMagick、xdotool、日本語のフォントも要る
 # （DEVELOPMENT.md の「Dev Container で統合テストを動かす準備」）。
 set -euo pipefail

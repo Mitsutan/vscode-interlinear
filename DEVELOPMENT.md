@@ -9,7 +9,7 @@
 翻訳サーバーの用意の仕方は2通りある。
 
 - **自動管理（既定）**: 初回にセットアップを実行する。
-- **外部サーバー**: 自分で起動した llama-server（起動方法は [README](README.md#自分で起動したサーバーを使う)）を使い、`interlinear.server.mode` を `external` にする。
+- **外部サーバー**: 自分で起動した llama-server（起動方法は [README](README.ja.md#自分で起動したサーバーを使う)）を使い、`interlinear.server.mode` を `external` にする。
 
 ## コマンド
 
@@ -59,13 +59,22 @@ sudo apt-get install -y --no-install-recommends imagemagick xdotool fonts-noto-c
 
 ### README のスクリーンショット
 
-`images/screenshot-*.png` は、`test/fixtures/showcase.ts` を実モデルで訳した画面を撮ったもの。表示や訳文が変わったら撮り直す。
+README の画像は、実モデルで訳した画面を撮ったもの。表示や訳文が変わったら撮り直す。
+
+| 画像 | README | 撮る画面 |
+|---|---|---|
+| `images/screenshot-*.en.png` | 英語（`README.md`） | `test/fixtures/showcase-ja.ts`（日本語のコメント）を英語に訳した画面 |
+| `images/screenshot-*.png` | 日本語（`README.ja.md`） | `test/fixtures/showcase.ts`（英語のコメント）を日本語に訳した画面 |
 
 ```bash
 INTERLINEAR_E2E_ENDPOINT=http://127.0.0.1:18080 bash scripts/screenshots.sh
 ```
 
 起動中の llama-server が要る。訳の質が最も高い 8B で撮る（README にもそう書いてある）。
+
+既定では英語の README の画像だけを撮る。テスト用の VS Code は英語で表示されるので、日本語の README の画像を撮り直すと、ホバーの下の「ローカル翻訳」などの拡張の表示が英語になってしまう。いまの日本語の画像は、拡張の表示が日本語だけだったとき（0.1.1）に撮ったもの。それでも撮り直すときは、`INTERLINEAR_SCREENSHOT_LANGS=en,ja` を指定する。
+
+日本語の画像の名前に `.ja` を付けていないのは、公開済みの版の Marketplace のページがこの名前で画像を参照しているため。vsce は README の画像を GitHub の `HEAD` の URL に書き換えるので、名前を変えると、公開済みのページで画像が表示されなくなる。
 
 テーマは Dark Modern にしている。行末の訳文の文字と背景のコントラスト比が 5.79 あり、青みもない（Light Modern は 3.15 と低い）。テーマを比べるときは、`INTERLINEAR_SCREENSHOT_THEMES='Dark Modern,Light Modern'` のようにカンマ区切りで指定すると、画像の名前にテーマ名が付く。
 
@@ -87,13 +96,30 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 | `src/managed/` | 自動管理モード。ダウンロードするファイルの固定（manifest）、検証付きダウンロード、配置、llama-server の起動・停止 |
 | `src/editor/` | HoverProvider（コメント用・ドキュメント用）、先読み、行末表示、ステータスバー、セットアップの流れ |
 | `src/extension.ts` | エントリポイント（設定・コマンドの登録） |
+| `src/l10n.ts` | 表示言語に合わせた文言の準備（`@vscode/l10n` に訳を渡す）と、列挙の書式 |
+| `l10n/`、`package.nls.json`、`package.nls.ja.json` | 画面の文言の日本語訳と、`package.json` の文言（下の「画面の文言」を参照） |
 | `test/unit/` | 単体テスト（`node --test`） |
 | `test/integration/` | 統合テスト（`@vscode/test-electron`） |
-| `test/fixtures/` | F5 で開くサンプルと、スクリーンショット用のファイル（型チェックの対象外）。`showcase.ts` は README の画像用 |
+| `test/fixtures/` | F5 で開くサンプルと、スクリーンショット用のファイル（型チェックの対象外）。`showcase-ja.ts` と `showcase.ts` は README の画像用 |
 | `scripts/check-manifest.ts` | manifest の URL とサイズの確認 |
 | `scripts/install-real.ts` | 自動管理と同じ方法で llama.cpp とモデルをダウンロードし、実物を使うテスト用の環境変数を出力する |
 | `scripts/screenshots.sh` | 仮想ディスプレイで VS Code を動かし、README のスクリーンショットを撮る |
 | `images/icon.svg` | アイコンの元データ。Marketplace は SVG のアイコンを受け付けないので、PNG にしたもの（`images/icon.png`）を使う。変えたら `magick -background none -density 96 images/icon.svg -resize 256x256 -strip PNG32:images/icon.png` で作り直す |
+
+## 画面の文言（英語・日本語）
+
+原文は英語で書き、日本語訳は別のファイルに置く。VS Code の表示言語が日本語なら日本語で、それ以外なら英語で表示される。
+
+| 文言の場所 | 原文 | 日本語訳 |
+|---|---|---|
+| `package.json`（コマンド名、設定の説明など） | 値を `%キー%` にして、英語を `package.nls.json` に書く | `package.nls.ja.json` |
+| コード（通知、ホバー、ステータスバーなど） | `vscode.l10n.t('English text {0}', arg)`。vscode に依存しない `src/managed/` と `src/translation/` では、`@vscode/l10n` の `l10n.t` を使う | `l10n/bundle.l10n.ja.json`。キーは英語の原文そのもの |
+
+- `l10n.t` の最初の引数は文字列リテラルにする（訳を引くキーになるため）。原文を変えたら、訳のキーも合わせて変える。
+- モジュールの読み込み時に `l10n.t` を呼ばない。activate の `configureL10n()` が `@vscode/l10n` に訳を渡すより前に評価され、英語になってしまう。
+- ログ（出力パネル）は訳さず、英語で書く。issue に貼られたときに誰でも読めるようにするため。
+- `npm test`（`test/unit/l10n.test.ts`）が、訳の過不足、`{0}` などの数の不一致、コードに書かれた日本語の文字列を見つける。
+- 日本語の表示を確かめるには、表示言語を日本語にした VS Code（Japanese Language Pack）で F5 を押す。統合テストの VS Code は英語で表示される。
 
 ## CI
 

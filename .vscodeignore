@@ -2,6 +2,9 @@
 !dist/extension.cjs
 !dist/wasm/**
 !package.json
+!package.nls.json
+!package.nls.*.json
+!l10n/**
 !README.md
 !CHANGELOG.md
 !THIRD_PARTY_NOTICES.md

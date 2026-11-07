@@ -2,6 +2,7 @@
  * 翻訳単位（コメント1つ、またはホバーのドキュメント1つ）を訳す。段落（prose ブロック）ごとにキャッシュを引き、
  * 足りない段落だけをキュー経由で llama-server に投げ、訳文を元の構造に組み戻す。
  */
+import * as l10n from '@vscode/l10n';
 import { buildContext, type TranslatableText } from '../core/context.ts';
 import type { ProbeResult } from '../core/llama-client.ts';
 import { reassemble } from '../core/normalize.ts';
@@ -18,11 +19,11 @@ export interface TranslationBackend {
 function downMessage(probe: Exclude<ProbeResult, { status: 'ok' }>, endpoint: string): string {
   switch (probe.status) {
     case 'loading':
-      return `翻訳サーバー（${endpoint}）はモデルを読み込み中です`;
+      return l10n.t('The translation server ({0}) is loading the model', endpoint);
     case 'not-llama':
-      return `${endpoint} で応答したのは llama-server ではありません（別のアプリがこのポートを使っている可能性があります）`;
+      return l10n.t('The server responding at {0} is not llama-server (another app may be using this port)', endpoint);
     case 'unreachable':
-      return `翻訳サーバー（${endpoint}）に接続できません`;
+      return l10n.t('Cannot connect to the translation server ({0})', endpoint);
     case 'unavailable':
       return probe.message;
   }
@@ -211,7 +212,7 @@ export class TranslationService {
     } catch (e) {
       // fetch の接続エラーは TypeError("fetch failed") になる。利用者向けの文言に置き換える
       if (e instanceof TypeError && !signal.aborted) {
-        const message = `翻訳サーバー（${this.settings.endpoint}）に接続できません`;
+        const message = l10n.t('Cannot connect to the translation server ({0})', this.settings.endpoint);
         if (generation === this.generation) {
           this.lastCheck = this.now();
           this.setState({ status: 'down', message });
@@ -231,7 +232,7 @@ export class TranslationService {
     }
     const next = await this.checkServer();
     if (next.status === 'ok') return next.model;
-    throw new ServerUnavailableError(next.status === 'down' ? next.message : '翻訳サーバーの状態を確認できません');
+    throw new ServerUnavailableError(next.status === 'down' ? next.message : l10n.t('Could not determine the translation server status'));
   }
 
   private requests(unit: TranslatableText): Array<{ index: number; req: TranslateRequest }> {

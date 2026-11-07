@@ -34,6 +34,8 @@ await writeFile(
     'window.dialogStyle': 'custom',
     // Copilot の案内や Chat を出さない。スクリーンショットに写り込み、案内のダイアログはキー入力も奪う
     'chat.disableAIFeatures': true,
+    // テスト用の VS Code は英語表示で、出力言語の既定値が en になる。フィクスチャは英語のコメントなので、訳す対象にするため ja にする
+    'interlinear.targetLanguage': 'ja',
   }),
 );
 
@@ -45,7 +47,14 @@ try {
     extensionTestsPath: path.join(root, 'dist-test', 'suite.cjs'),
     // 実モデルでの確認: INTERLINEAR_E2E_ENDPOINT=http://127.0.0.1:18080 npm run test:integration
     extensionTestsEnv: Object.fromEntries(
-      ['INTERLINEAR_E2E_ENDPOINT', 'INTERLINEAR_SCREENSHOT_DIR', 'INTERLINEAR_SCREENSHOT_THEMES', 'INTERLINEAR_REAL_LLAMA_SERVER', 'INTERLINEAR_REAL_MODEL'].flatMap((k) => (process.env[k] ? [[k, process.env[k]]] : [])),
+      [
+        'INTERLINEAR_E2E_ENDPOINT',
+        'INTERLINEAR_SCREENSHOT_DIR',
+        'INTERLINEAR_SCREENSHOT_THEMES',
+        'INTERLINEAR_SCREENSHOT_LANGS',
+        'INTERLINEAR_REAL_LLAMA_SERVER',
+        'INTERLINEAR_REAL_MODEL',
+      ].flatMap((k) => (process.env[k] ? [[k, process.env[k]]] : [])),
     ),
     launchArgs: [
       '--no-sandbox',

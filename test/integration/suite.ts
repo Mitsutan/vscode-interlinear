@@ -462,7 +462,7 @@ export async function run(): Promise<void> {
         const started = Date.now();
         await waitFor(
           'translated documentation',
-          () => /ローカル翻訳/.test(text),
+          () => /Local translation/.test(text),
           120_000,
           async () => {
             text = await hoverText(e2eDoc, 0, col);
@@ -585,7 +585,7 @@ export async function run(): Promise<void> {
             // 説明の短い Math.random にするのは、ホバーの高さに上限があり、長い説明だと訳文がスクロールの先に隠れるため
             const random = new vscode.Position(lineOf('Math.random'), editor.document.lineAt(lineOf('Math.random')).text.indexOf('random') + 2);
             text = '';
-            await waitFor('documentation hover', () => /ローカル翻訳/.test(text), 120_000, async () => {
+            await waitFor('documentation hover', () => /Local translation/.test(text), 120_000, async () => {
               text = await hoverText(editor.document, random.line, random.character);
             });
             // 開き直すのは、コマンドで開いたホバーはカーソルを動かしても閉じず、次のホバーが出ないため

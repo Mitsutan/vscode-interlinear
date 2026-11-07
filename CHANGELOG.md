@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0（2026-11-07）
+
+- 正式版として公開した。内容は 0.1.2 と同じ（これまでの変更は、CHANGELOG の 0.1.0〜0.1.2 の節を参照）
+
 ## 0.1.2（2026-11-07）
 
 - 出力言語（`interlinear.targetLanguage`）の既定値を、VS Code の表示言語に合わせるようにした（日本語なら `ja`、それ以外は `en`）。VS Code を英語で表示していて日本語に訳したい場合は、`interlinear.targetLanguage` を `ja` にする

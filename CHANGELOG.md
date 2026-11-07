@@ -1,11 +1,11 @@
 # Changelog
 
-## 未リリース
+## 0.1.2（2026-11-07）
 
 - 出力言語（`interlinear.targetLanguage`）の既定値を、VS Code の表示言語に合わせるようにした（日本語なら `ja`、それ以外は `en`）。VS Code を英語で表示していて日本語に訳したい場合は、`interlinear.targetLanguage` を `ja` にする
 - 画面の表示（コマンド名、設定の説明、通知、ホバー、ステータスバー）を英語にも対応した。VS Code の表示言語が日本語なら、これまでどおり日本語で表示する
 - 翻訳サーバーのログ（出力パネル）は英語にした
-- README を英語にした。日本語の README は [README.ja.md](README.ja.md)
+- README を英語にした。日本語の README は README.ja.md に移した
 
 ## 0.1.1（2026-11-06）
 

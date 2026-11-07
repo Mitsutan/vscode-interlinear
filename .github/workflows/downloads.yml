@@ -29,6 +29,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 26
+          cache: npm
+      # src/managed/ が使うパッケージ（@vscode/l10n）を入れる
+      - run: npm ci
       # すべてのプラットフォーム向けのファイルについて、URL とサイズを確かめる
       - run: npm run check:manifest
 
@@ -50,6 +53,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 26
+          cache: npm
+      - run: npm ci
       - name: llama.cpp と 0.8B のモデルを、自動管理と同じ方法でダウンロードする
         run: node scripts/install-real.ts "$RUNNER_TEMP/interlinear" 0.8b >> "$GITHUB_ENV"
       - name: llama-server を起動して訳す

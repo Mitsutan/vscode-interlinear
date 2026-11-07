@@ -54,8 +54,8 @@ test('manifest: Linux 版は必要な glibc より古い環境と、glibc でな
   const linux = { ...LLAMA_ASSETS['linux-arm64']!, minGlibc: '2.38' };
   assert.equal(llamaIncompatibility(linux, '2.38'), undefined);
   assert.equal(llamaIncompatibility(linux, '2.41'), undefined);
-  assert.match(llamaIncompatibility(linux, '2.36') ?? '', /glibc 2\.38 以上.*2\.36/);
-  assert.match(llamaIncompatibility(linux, '2.4') ?? '', /2\.38 以上/); // 文字列ではなく数値で比べる
+  assert.match(llamaIncompatibility(linux, '2.36') ?? '', /glibc 2\.38 or later.*2\.36/);
+  assert.match(llamaIncompatibility(linux, '2.4') ?? '', /2\.38 or later/); // 文字列ではなく数値で比べる
   assert.match(llamaIncompatibility(linux, undefined) ?? '', /musl/);
   assert.equal(llamaIncompatibility(LLAMA_ASSETS['darwin-arm64']!, undefined), undefined);
 });
@@ -123,8 +123,8 @@ test('Installer: llama.cpp を取得・検証・展開し、ダウンロード�
 test('Installer: 環境に合わない llama.cpp はダウンロードしない', async () => {
   const asset = { url: 'http://127.0.0.1:1/unreachable.tar.gz', name: 'llama.tar.gz', bytes: 1, sha256: '0'.repeat(64), minGlibc: '2.38' };
   const old = new Installer(path.join(work, 'storage-old-glibc'), 'linux-arm64', asset, () => '2.36');
-  assert.match(old.unsupportedReason ?? '', /glibc 2\.38 以上/);
-  await assert.rejects(old.installLlama(), /glibc 2\.38 以上/);
+  assert.match(old.unsupportedReason ?? '', /glibc 2\.38 or later/);
+  await assert.rejects(old.installLlama(), /glibc 2\.38 or later/);
   assert.equal(existsSync(path.join(work, 'storage-old-glibc', 'downloads')), false);
 
   assert.equal(new Installer(work, 'linux-arm64', asset, () => '2.39').unsupportedReason, undefined);
@@ -208,7 +208,7 @@ test('ManagedServer: 準備ができていなければ理由を返す', async ()
   const { server } = managed('/models/fake-2b.gguf', { server: undefined });
   const probe = await server.probe();
   assert.equal(probe.status, 'unavailable');
-  assert.match(probe.status === 'unavailable' ? probe.message : '', /セットアップ/);
+  assert.match(probe.status === 'unavailable' ? probe.message : '', /Run setup/);
   await server.dispose();
 });
 
@@ -217,12 +217,12 @@ test('ManagedServer: 起動直後に終了したら理由を返し、繰り返�
   try {
     for (let i = 0; i < 3; i++) {
       const p = await server.probe();
-      assert.match(p.status === 'unavailable' ? p.message : '', /起動直後に終了/);
+      assert.match(p.status === 'unavailable' ? p.message : '', /exited right after starting/);
     }
     const p = await server.probe();
-    assert.match(p.status === 'unavailable' ? p.message : '', /何度も異常終了/);
+    assert.match(p.status === 'unavailable' ? p.message : '', /crashed repeatedly/);
     const r = await server.restart();
-    assert.match(r.status === 'unavailable' ? r.message : '', /起動直後に終了/, '再起動すると、もう一度起動を試みる');
+    assert.match(r.status === 'unavailable' ? r.message : '', /exited right after starting/, '再起動すると、もう一度起動を試みる');
   } finally {
     await server.dispose();
   }

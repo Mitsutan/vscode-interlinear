@@ -8,6 +8,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 import path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import { LlamaClient, type ProbeResult } from '../core/llama-client.ts';
 import type { TranslateRequest } from '../core/pfml3.ts';
 
@@ -20,6 +21,7 @@ export interface ManagedServerOptions {
   parallel: number;
   /** 最後に使われてから止めるまでの時間。0 なら止めない */
   idleTimeoutMs: number;
+  /** ログ。訳さずに英語で書くのは、issue に貼られたときに誰でも読めるようにするため */
   log: (line: string) => void;
   /** モデルの読み込みを待つ上限 */
   startTimeoutMs?: number;
@@ -117,7 +119,7 @@ export class ManagedServer {
   }
 
   private ensureStarted(): Promise<LlamaClient> {
-    if (this.disposed) return Promise.reject(new NotReadyError('翻訳サーバーは停止しました'));
+    if (this.disposed) return Promise.reject(new NotReadyError(l10n.t('The translation server has been stopped')));
     if (this.client) return Promise.resolve(this.client);
     this.starting ??= this.start().finally(() => {
       this.starting = undefined;
@@ -129,12 +131,14 @@ export class ManagedServer {
     const now = Date.now();
     this.crashes = this.crashes.filter((t) => now - t < CRASH_WINDOW_MS);
     if (this.crashes.length >= MAX_CRASHES) {
-      throw new NotReadyError('翻訳サーバーが短時間に何度も異常終了したため、起動を止めています。ログを確認してから再起動してください');
+      throw new NotReadyError(
+        l10n.t('The translation server crashed repeatedly in a short time, so it will not be started again. Check the log, then restart it'),
+      );
     }
     const server = await this.opts.serverPath();
-    if (!server) throw new NotReadyError('llama-server がまだ用意されていません。セットアップを実行してください');
+    if (!server) throw new NotReadyError(l10n.t('llama-server is not set up yet. Run setup'));
     const model = await this.opts.modelPath();
-    if (!model) throw new NotReadyError('翻訳モデルがまだダウンロードされていません。セットアップを実行してください');
+    if (!model) throw new NotReadyError(l10n.t('The translation model has not been downloaded yet. Run setup'));
 
     const port = await freePort();
     const parallel = Math.max(1, this.opts.parallel);
@@ -146,7 +150,7 @@ export class ManagedServer {
       '-np', String(parallel),
       '--alias', path.basename(model, '.gguf'),
     ];
-    this.opts.log(`起動: ${server} ${args.join(' ')}`);
+    this.opts.log(`Starting: ${server} ${args.join(' ')}`);
     // 共有ライブラリを llama-server と同じディレクトリから読ませるため、cwd もそこにする
     const proc = spawn(server, args, { cwd: path.dirname(server), stdio: ['ignore', 'pipe', 'pipe'] });
     const forward = (chunk: Buffer) => {
@@ -158,10 +162,10 @@ export class ManagedServer {
     let spawnError: Error | undefined;
     proc.once('error', (e) => {
       spawnError = e;
-      this.opts.log(`起動できませんでした: ${e.message}`);
+      this.opts.log(`Failed to start: ${e.message}`);
     });
     proc.once('exit', (code, signal) => {
-      this.opts.log(`終了しました（コード ${code ?? '-'}、シグナル ${signal ?? '-'}）`);
+      this.opts.log(`Exited (code ${code ?? '-'}, signal ${signal ?? '-'})`);
       if (!this.expectedExits.has(proc)) this.crashes.push(Date.now());
       if (this.proc === proc) {
         this.proc = undefined;
@@ -173,23 +177,23 @@ export class ManagedServer {
     const client = new LlamaClient(`http://127.0.0.1:${port}`);
     const deadline = Date.now() + (this.opts.startTimeoutMs ?? 180_000);
     for (;;) {
-      if (spawnError) throw new NotReadyError(`llama-server を起動できません: ${spawnError.message}`);
+      if (spawnError) throw new NotReadyError(l10n.t('Cannot start llama-server: {0}', spawnError.message));
       if (proc.exitCode !== null || proc.signalCode !== null) {
-        throw new NotReadyError(`llama-server が起動直後に終了しました（コード ${proc.exitCode ?? proc.signalCode}）。ログを確認してください`);
+        throw new NotReadyError(l10n.t('llama-server exited right after starting (code {0}). Check the log', String(proc.exitCode ?? proc.signalCode)));
       }
       const probe = await client.probe();
       if (probe.status === 'ok') break;
       if (Date.now() > deadline) {
         this.expectedExits.add(proc);
         proc.kill('SIGKILL');
-        throw new NotReadyError('llama-server の起動がタイムアウトしました。ログを確認してください');
+        throw new NotReadyError(l10n.t('llama-server timed out while starting. Check the log'));
       }
       await sleep(250);
     }
     if (this.disposed) {
       this.expectedExits.add(proc);
       proc.kill();
-      throw new NotReadyError('翻訳サーバーは停止しました');
+      throw new NotReadyError(l10n.t('The translation server has been stopped'));
     }
     this.proc = proc;
     this.client = client;
@@ -206,7 +210,7 @@ export class ManagedServer {
     this.clearIdle();
     if (this.opts.idleTimeoutMs <= 0 || this.inFlight > 0 || !this.client) return;
     this.idleTimer = setTimeout(() => {
-      this.opts.log('しばらく使われていないため停止します');
+      this.opts.log('Stopping after a period of inactivity');
       void this.stop();
     }, this.opts.idleTimeoutMs);
     this.idleTimer.unref?.();

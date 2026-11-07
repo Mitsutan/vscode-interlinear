@@ -16,6 +16,8 @@ import { InlineDecorator, type InlineMode } from './editor/inlineDecorator.ts';
 import { VisiblePrefetcher } from './editor/prefetch.ts';
 import { ServerController } from './editor/server.ts';
 import { StatusBar } from './editor/statusBar.ts';
+import { configureL10n, formatList } from './l10n.ts';
+import { MODELS } from './managed/manifest.ts';
 import { TranslationCache } from './translation/cache.ts';
 import { TaskQueue } from './translation/queue.ts';
 import { TranslationService } from './translation/service.ts';
@@ -34,6 +36,7 @@ export interface ExtensionApi {
 let onDeactivate: (() => Promise<void>) | undefined;
 
 export function activate(context: vscode.ExtensionContext): ExtensionApi {
+  configureL10n();
   let config: ExtensionConfig = readConfig();
 
   const server = new ServerController(context);
@@ -54,13 +57,13 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
   const errorActions = (): HoverAction[] =>
     config.serverMode === 'managed'
       ? [
-          ...(server.needsSetup ? [{ title: 'セットアップ', command: 'interlinear.setup' }] : []),
-          { title: 'サーバーを再起動', command: 'interlinear.restartServer' },
-          { title: 'ログを表示', command: 'interlinear.showServerLog' },
+          ...(server.needsSetup ? [{ title: vscode.l10n.t('Set Up'), command: 'interlinear.setup' }] : []),
+          { title: vscode.l10n.t('Restart Server'), command: 'interlinear.restartServer' },
+          { title: vscode.l10n.t('Show Log'), command: 'interlinear.showServerLog' },
         ]
       : [
-          { title: '接続を再確認', command: 'interlinear.checkServer' },
-          { title: 'エンドポイントの設定', command: 'workbench.action.openSettings', args: [`${SECTION}.endpoint`] },
+          { title: vscode.l10n.t('Check Connection Again'), command: 'interlinear.checkServer' },
+          { title: vscode.l10n.t('Endpoint Settings'), command: 'workbench.action.openSettings', args: [`${SECTION}.endpoint`] },
         ];
   const hover = new CommentHoverProvider(index, service, () => config.enabled, errorActions);
   const docHover = new DocHoverProvider(index, service, () => config.enabled && config.translateDocumentation);
@@ -149,11 +152,13 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
       await server.refreshSetupState(config);
       if (removed.includes(config.model)) rebuildBackend();
       status.update();
-      void vscode.window.showInformationMessage(`削除しました: ${removed.join('、')}`);
+      void vscode.window.showInformationMessage(vscode.l10n.t('Removed {0}', formatList(removed.map((size) => MODELS[size].label))));
     }),
     vscode.commands.registerCommand('interlinear.toggle', async () => {
       await vscode.workspace.getConfiguration(SECTION).update('enabled', !config.enabled, vscode.ConfigurationTarget.Global);
-      void vscode.window.showInformationMessage(`コメントの翻訳を${config.enabled ? '有効' : '無効'}にしました`);
+      void vscode.window.showInformationMessage(
+        config.enabled ? vscode.l10n.t('Comment translation enabled') : vscode.l10n.t('Comment translation disabled'),
+      );
     }),
     vscode.commands.registerCommand('interlinear.toggleInline', async () => {
       // オフから戻すときは、直前に使っていた範囲（short / all）に戻す
@@ -165,40 +170,67 @@ export function activate(context: vscode.ExtensionContext): ExtensionApi {
     vscode.commands.registerCommand('interlinear.checkServer', async () => {
       const state = await service.checkServer();
       if (state.status === 'ok') {
-        void vscode.window.showInformationMessage(`翻訳サーバーに接続しました: ${state.model}（${serverLabel(config)}）`);
+        void vscode.window.showInformationMessage(vscode.l10n.t('Connected to the translation server: {0} ({1})', state.model, serverLabel(config)));
         return;
       }
-      const message = state.status === 'down' ? state.message : '翻訳サーバーの状態を確認できません';
-      const action = config.serverMode === 'managed' ? (server.needsSetup ? 'セットアップ' : 'ログを表示') : '設定を開く';
+      const message = state.status === 'down' ? state.message : vscode.l10n.t('Could not determine the translation server status');
+      const setup = vscode.l10n.t('Set Up');
+      const showLog = vscode.l10n.t('Show Log');
+      const openSettings = vscode.l10n.t('Open Settings');
+      const action = config.serverMode === 'managed' ? (server.needsSetup ? setup : showLog) : openSettings;
       const picked = await vscode.window.showWarningMessage(message, action);
-      if (picked === 'セットアップ') await vscode.commands.executeCommand('interlinear.setup');
-      if (picked === 'ログを表示') server.output.show();
-      if (picked === '設定を開く') await vscode.commands.executeCommand('workbench.action.openSettings', `${SECTION}.endpoint`);
+      if (picked === setup) await vscode.commands.executeCommand('interlinear.setup');
+      if (picked === showLog) server.output.show();
+      if (picked === openSettings) await vscode.commands.executeCommand('workbench.action.openSettings', `${SECTION}.endpoint`);
     }),
     vscode.commands.registerCommand('interlinear.clearCache', async () => {
       const n = cache.size;
       cache.clear();
       await cache.flush();
       status.update();
-      void vscode.window.showInformationMessage(`翻訳キャッシュを削除しました（${n} 件）`);
+      void vscode.window.showInformationMessage(vscode.l10n.t('Cleared the translation cache ({0} entries)', n));
     }),
     vscode.commands.registerCommand('interlinear.showMenu', async () => {
       const managed = config.serverMode === 'managed';
       const items: Array<vscode.QuickPickItem & { command: string; args?: unknown[] }> = [
-        { label: config.enabled ? '$(circle-slash) 翻訳を無効にする' : '$(check) 翻訳を有効にする', command: 'interlinear.toggle' },
         {
-          label: config.inlineTranslation === 'off' ? '$(eye) コメントの右側に訳文を表示する' : '$(eye-closed) コメントの右側の訳文を隠す',
+          label: config.enabled ? `$(circle-slash) ${vscode.l10n.t('Disable Translation')}` : `$(check) ${vscode.l10n.t('Enable Translation')}`,
+          command: 'interlinear.toggle',
+        },
+        {
+          label:
+            config.inlineTranslation === 'off'
+              ? `$(eye) ${vscode.l10n.t('Show Translations Beside Comments')}`
+              : `$(eye-closed) ${vscode.l10n.t('Hide Translations Beside Comments')}`,
           command: 'interlinear.toggleInline',
         },
         ...(managed
           ? [
-              { label: '$(cloud-download) 翻訳モデルをセットアップ・変更する', description: config.model, command: 'interlinear.setup' },
-              { label: '$(debug-restart) 翻訳サーバーを再起動する', command: 'interlinear.restartServer' },
-              { label: '$(output) 翻訳サーバーのログを表示する', command: 'interlinear.showServerLog' },
+              {
+                label: `$(cloud-download) ${vscode.l10n.t('Set Up or Change Translation Model')}`,
+                description: config.model,
+                command: 'interlinear.setup',
+              },
+              { label: `$(debug-restart) ${vscode.l10n.t('Restart Translation Server')}`, command: 'interlinear.restartServer' },
+              { label: `$(output) ${vscode.l10n.t('Show Translation Server Log')}`, command: 'interlinear.showServerLog' },
             ]
-          : [{ label: '$(plug) 翻訳サーバーへの接続を確認する', description: config.endpoint, command: 'interlinear.checkServer' }]),
-        { label: '$(trash) 翻訳キャッシュを削除する', description: `${cache.size} 件`, command: 'interlinear.clearCache' },
-        { label: '$(gear) 設定を開く', command: 'workbench.action.openSettings', args: [`@ext:${context.extension.id}`] },
+          : [
+              {
+                label: `$(plug) ${vscode.l10n.t('Check Translation Server Connection')}`,
+                description: config.endpoint,
+                command: 'interlinear.checkServer',
+              },
+            ]),
+        {
+          label: `$(trash) ${vscode.l10n.t('Clear Translation Cache')}`,
+          description: vscode.l10n.t('{0} entries', cache.size),
+          command: 'interlinear.clearCache',
+        },
+        {
+          label: `$(gear) ${vscode.l10n.t('Open Settings')}`,
+          command: 'workbench.action.openSettings',
+          args: [`@ext:${context.extension.id}`],
+        },
       ];
       const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Interlinear' });
       if (picked) await vscode.commands.executeCommand(picked.command, ...(picked.args ?? []));

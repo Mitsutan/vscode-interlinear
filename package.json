@@ -1,7 +1,7 @@
 {
   "name": "interlinear",
   "displayName": "Interlinear - Local Comment Translator",
-  "description": "ソースコードのコメントと、ホバーで表示されるドキュメントを、ローカルの翻訳モデル（PLaMo 3 Translate + llama.cpp）で翻訳して表示する",
+  "description": "%description%",
   "version": "0.1.1",
   "publisher": "mitsutan",
   "license": "MIT",
@@ -22,7 +22,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "信頼されていないワークスペースでは、ワークスペースの設定で翻訳サーバーの接続先や動作モードを変更できません（コードが意図しないサーバーに送られないようにするため）。",
+      "description": "%untrustedWorkspaces.description%",
       "restrictedConfigurations": [
         "interlinear.server.mode",
         "interlinear.endpoint",
@@ -53,47 +53,47 @@
     "commands": [
       {
         "command": "interlinear.setup",
-        "title": "翻訳モデルをセットアップする",
+        "title": "%command.setup%",
         "category": "Interlinear"
       },
       {
         "command": "interlinear.restartServer",
-        "title": "翻訳サーバーを再起動する",
+        "title": "%command.restartServer%",
         "category": "Interlinear"
       },
       {
         "command": "interlinear.showServerLog",
-        "title": "翻訳サーバーのログを表示する",
+        "title": "%command.showServerLog%",
         "category": "Interlinear"
       },
       {
         "command": "interlinear.removeModels",
-        "title": "ダウンロードしたモデルを削除する",
+        "title": "%command.removeModels%",
         "category": "Interlinear"
       },
       {
         "command": "interlinear.toggle",
-        "title": "有効/無効を切り替える",
+        "title": "%command.toggle%",
         "category": "Interlinear"
       },
       {
         "command": "interlinear.toggleInline",
-        "title": "行末の訳文表示を切り替える",
+        "title": "%command.toggleInline%",
         "category": "Interlinear"
       },
       {
         "command": "interlinear.checkServer",
-        "title": "翻訳サーバーへの接続を確認する",
+        "title": "%command.checkServer%",
         "category": "Interlinear"
       },
       {
         "command": "interlinear.clearCache",
-        "title": "翻訳キャッシュを削除する",
+        "title": "%command.clearCache%",
         "category": "Interlinear"
       },
       {
         "command": "interlinear.showMenu",
-        "title": "メニューを開く",
+        "title": "%command.showMenu%",
         "category": "Interlinear"
       }
     ],
@@ -103,12 +103,12 @@
         "interlinear.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "コメントの翻訳を有効にする。"
+          "description": "%config.enabled%"
         },
         "interlinear.translateDocumentation": {
           "type": "boolean",
           "default": true,
-          "description": "言語サーバーなどがホバーで表示するドキュメント（関数やクラスの説明）も翻訳する。"
+          "description": "%config.translateDocumentation%"
         },
         "interlinear.inlineTranslation": {
           "type": "string",
@@ -118,19 +118,19 @@
             "all"
           ],
           "enumDescriptions": [
-            "表示しない（ホバーだけ）",
-            "行コメント・行末コメントと、1行で書かれたコメント",
-            "JSDoc などの複数行のブロックも含めるすべてのコメント"
+            "%config.inlineTranslation.off%",
+            "%config.inlineTranslation.short%",
+            "%config.inlineTranslation.all%"
           ],
           "default": "short",
-          "description": "コメントの右側に訳文を表示する範囲。"
+          "description": "%config.inlineTranslation%"
         },
         "interlinear.inlineMaxWidth": {
           "type": "number",
           "default": 120,
           "minimum": 40,
           "maximum": 1000,
-          "markdownDescription": "コードと右側の訳文を合わせた1行の表示幅（桁数。全角文字は2桁）の目安。超える分は「…」で省略する（全文はホバーで読める）。編集領域の幅に合わせて調整する。"
+          "markdownDescription": "%config.inlineMaxWidth%"
         },
         "interlinear.server.mode": {
           "type": "string",
@@ -139,11 +139,11 @@
             "external"
           ],
           "enumDescriptions": [
-            "拡張が翻訳サーバー（llama-server）を起動・管理する。初回にモデルをダウンロードする",
-            "interlinear.endpoint で指定した、自分で起動したサーバーを使う"
+            "%config.server.mode.managed%",
+            "%config.server.mode.external%"
           ],
           "default": "managed",
-          "markdownDescription": "翻訳サーバーの用意の仕方。指定していない場合、`interlinear.endpoint` を設定済みなら `external` として動く。"
+          "markdownDescription": "%config.server.mode%"
         },
         "interlinear.server.model": {
           "type": "string",
@@ -153,45 +153,45 @@
             "8b"
           ],
           "enumDescriptions": [
-            "0.8B（0.6 GB）。軽量。GPU のない環境向け",
-            "2B（1.8 GB）。推奨",
-            "8B（5.3 GB）。高品質だが約 3 倍遅い"
+            "%config.server.model.0.8b%",
+            "%config.server.model.2b%",
+            "%config.server.model.8b%"
           ],
           "default": "2b",
-          "markdownDescription": "`managed` のときに使う翻訳モデル。ダウンロードしていないモデルを選んだら、コマンド「翻訳モデルをセットアップする」でダウンロードする。"
+          "markdownDescription": "%config.server.model%"
         },
         "interlinear.server.idleTimeoutMinutes": {
           "type": "number",
           "default": 15,
           "minimum": 0,
-          "markdownDescription": "`managed` のとき、使われなくなってから翻訳サーバーを止めるまでの時間（分）。止めるとモデルが使っていたメモリが空く。次に使うときは起動に数秒かかる。0 なら止めない。"
+          "markdownDescription": "%config.server.idleTimeoutMinutes%"
         },
         "interlinear.server.llamaServerPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "`managed` のときに使う llama-server のパス。空なら自動でダウンロードしたもの（CPU 版。macOS は Metal 対応）を使う。CUDA などの GPU 版を使いたい場合に指定する。 実行ファイルを指すため、ユーザー設定（リモートではリモートの設定）でだけ指定できる。",
+          "markdownDescription": "%config.server.llamaServerPath%",
           "scope": "machine"
         },
         "interlinear.server.modelPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "`managed` のときに使うモデル（GGUF）のパス。空なら `interlinear.server.model` のモデルを使う。 ユーザー設定（リモートではリモートの設定）でだけ指定できる。",
+          "markdownDescription": "%config.server.modelPath%",
           "scope": "machine"
         },
         "interlinear.endpoint": {
           "type": "string",
           "default": "http://127.0.0.1:18080",
-          "markdownDescription": "`interlinear.server.mode` が `external` のときに使う llama-server の URL。Dev Container からホストのサーバーを使う場合は `http://host.docker.internal:18080` など。"
+          "markdownDescription": "%config.endpoint%"
         },
         "interlinear.targetLanguage": {
           "type": "string",
           "default": "",
-          "description": "出力言語（ISO 639-1 コード。例: ja, en, zh, ko）。空なら VS Code の表示言語に合わせる（日本語なら ja、それ以外は en）。"
+          "description": "%config.targetLanguage%"
         },
         "interlinear.sourceLanguage": {
           "type": "string",
           "default": "",
-          "description": "入力言語。空ならモデルが判定する。"
+          "description": "%config.sourceLanguage%"
         },
         "interlinear.form": {
           "type": "string",
@@ -201,22 +201,22 @@
             "none"
           ],
           "enumDescriptions": [
-            "常体（だ・である）",
-            "敬体（です・ます）",
-            "指定しない"
+            "%config.form.plain%",
+            "%config.form.polite%",
+            "%config.form.none%"
           ],
           "default": "plain",
-          "description": "日本語に訳すときの文体。"
+          "description": "%config.form%"
         },
         "interlinear.useContext": {
           "type": "boolean",
           "default": true,
-          "description": "ファイル名とコメント直後のコード行を、翻訳の参考情報としてモデルに渡す。"
+          "description": "%config.useContext%"
         },
         "interlinear.glossary": {
           "type": "array",
           "default": [],
-          "markdownDescription": "用語集。訳語を固定したい語を `{ \"source\": \"原語\", \"target\": \"訳語\" }` で指定する。",
+          "markdownDescription": "%config.glossary%",
           "items": {
             "type": "object",
             "required": [
@@ -236,14 +236,14 @@
         "interlinear.prefetch": {
           "type": "boolean",
           "default": true,
-          "description": "画面に表示されているコメントを先に翻訳しておく。"
+          "description": "%config.prefetch%"
         },
         "interlinear.maxConcurrentRequests": {
           "type": "number",
           "default": 2,
           "minimum": 1,
           "maximum": 16,
-          "markdownDescription": "同時に送る翻訳リクエストの数。llama-server の `--parallel`（`-np`）と同じ値にする。"
+          "markdownDescription": "%config.maxConcurrentRequests%"
         }
       }
     }
@@ -260,6 +260,7 @@
   "devDependencies": {
     "@types/node": "26.6.6",
     "@types/vscode": "1.100.0",
+    "@vscode/l10n": "0.0.18",
     "@vscode/test-electron": "3.1.0",
     "@vscode/tree-sitter-wasm": "0.3.1",
     "@vscode/vsce": "4.1.0",
@@ -284,5 +285,6 @@
     "llm",
     "llama.cpp",
     "plamo"
-  ]
+  ],
+  "l10n": "./l10n"
 }

@@ -7,6 +7,7 @@ import { createWriteStream } from 'node:fs';
 import { mkdir, readdir, rename, rm, statfs } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import * as l10n from '@vscode/l10n';
 
 export interface DownloadProgress {
   received: number;
@@ -15,7 +16,7 @@ export interface DownloadProgress {
 
 export class IntegrityError extends Error {
   constructor(url: string, expected: string, actual: string) {
-    super(`ダウンロードしたファイルのハッシュが一致しません（${url}）。期待値 ${expected}、実際 ${actual}`);
+    super(l10n.t('The SHA-256 hash of the downloaded file does not match ({0}). Expected {1}, got {2}', url, expected, actual));
     this.name = 'IntegrityError';
   }
 }
@@ -29,7 +30,7 @@ export async function downloadVerified(url: string, dest: string, sha256: string
   await mkdir(path.dirname(dest), { recursive: true });
   const tmp = `${dest}.part`;
   const res = await fetch(url, { signal: opts.signal, redirect: 'follow' });
-  if (!res.ok || !res.body) throw new Error(`ダウンロードに失敗しました（HTTP ${res.status}）: ${url}`);
+  if (!res.ok || !res.body) throw new Error(l10n.t('Download failed (HTTP {0}): {1}', res.status, url));
   const total = Number(res.headers.get('content-length')) || undefined;
   const hash = createHash('sha256');
   const out = createWriteStream(tmp);
@@ -65,7 +66,7 @@ export async function ensureFreeSpace(dir: string, bytes: number): Promise<void>
   // 展開や一時ファイルの分として 1 割多めに見る
   if (free < bytes * 1.1) {
     const gb = (n: number) => (n / 1e9).toFixed(1);
-    throw new Error(`ディスクの空き容量が足りません（必要 ${gb(bytes * 1.1)} GB、空き ${gb(free)} GB）: ${dir}`);
+    throw new Error(l10n.t('Not enough free disk space (need {0} GB, available {1} GB): {2}', gb(bytes * 1.1), gb(free), dir));
   }
 }
 

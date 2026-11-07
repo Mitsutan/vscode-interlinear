@@ -11,7 +11,7 @@ export function escapeMarkdown(s: string): string {
 export function translationFooter(service: TranslationService): vscode.MarkdownString {
   const state = service.serverState;
   return new vscode.MarkdownString(
-    `$(globe) ローカル翻訳${state.status === 'ok' ? ` · ${escapeMarkdown(state.model)}` : ''}`,
+    `$(globe) ${vscode.l10n.t('Local translation')}${state.status === 'ok' ? ` · ${escapeMarkdown(state.model)}` : ''}`,
     true,
   );
 }

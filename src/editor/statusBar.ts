@@ -1,10 +1,10 @@
 /**
  * ステータスバーの表示。対応言語のエディタがアクティブなときだけ出す。
- *   $(globe) ja          待機中（接続 OK）
- *   $(sync~spin) 翻訳中 3  翻訳リクエストが残っている
- *   $(warning) 翻訳       サーバーに接続できない
- *   $(circle-slash) 翻訳  無効
- *   $(cloud-download) 翻訳: セットアップ  自動管理モードで、モデルがまだない（クリックでセットアップ）
+ *   $(globe) ja                       待機中（接続 OK）
+ *   $(sync~spin) Translating 3        翻訳リクエストが残っている
+ *   $(warning) Translation            サーバーに接続できない
+ *   $(circle-slash) Translation       無効
+ *   $(cloud-download) Translation: Set Up  自動管理モードで、モデルがまだない（クリックでセットアップ）
  */
 import * as vscode from 'vscode';
 import { serverLabel, type ExtensionConfig } from '../config.ts';
@@ -47,18 +47,18 @@ export class StatusBar implements vscode.Disposable {
     this.item.command = 'interlinear.showMenu';
 
     if (c.enabled && this.needsSetup()) {
-      this.item.text = '$(cloud-download) 翻訳: セットアップ';
-      this.item.tooltip = '翻訳モデルをダウンロードして、コメントの翻訳を使えるようにします（クリック）';
+      this.item.text = `$(cloud-download) ${vscode.l10n.t('Translation: Set Up')}`;
+      this.item.tooltip = vscode.l10n.t('Download the translation model to start translating comments (click)');
       this.item.command = 'interlinear.setup';
     } else if (!c.enabled) {
-      this.item.text = '$(circle-slash) 翻訳';
-      this.item.tooltip = 'コメントの翻訳は無効です（クリックでメニュー）';
+      this.item.text = `$(circle-slash) ${vscode.l10n.t('Translation')}`;
+      this.item.tooltip = vscode.l10n.t('Comment translation is disabled (click for menu)');
     } else if (state.status === 'down') {
-      this.item.text = '$(warning) 翻訳';
-      this.item.tooltip = `${state.message}\nクリックでメニュー`;
+      this.item.text = `$(warning) ${vscode.l10n.t('Translation')}`;
+      this.item.tooltip = `${state.message}\n${vscode.l10n.t('Click for menu')}`;
       this.item.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
     } else if (pending > 0) {
-      this.item.text = `$(sync~spin) 翻訳中 ${pending}`;
+      this.item.text = `$(sync~spin) ${vscode.l10n.t('Translating {0}', pending)}`;
       this.item.tooltip = this.details(c);
     } else {
       this.item.text = `$(globe) ${c.targetLang}`;
@@ -69,13 +69,13 @@ export class StatusBar implements vscode.Disposable {
 
   private details(c: ExtensionConfig): string {
     const state = this.service.serverState;
-    const model = state.status === 'ok' ? state.model : '確認中…';
+    const model = state.status === 'ok' ? state.model : vscode.l10n.t('Checking…');
     return [
-      `出力言語: ${c.targetLang}`,
-      `モデル: ${model}`,
-      `サーバー: ${serverLabel(c)}`,
-      `キャッシュ: ${this.service.cache.size} 件`,
-      'クリックでメニュー',
+      vscode.l10n.t('Output language: {0}', c.targetLang),
+      vscode.l10n.t('Model: {0}', model),
+      vscode.l10n.t('Server: {0}', serverLabel(c)),
+      vscode.l10n.t('Cache: {0} entries', this.service.cache.size),
+      vscode.l10n.t('Click for menu'),
     ].join('\n');
   }
 

@@ -7,6 +7,7 @@
  */
 import { rename, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
+import * as l10n from '@vscode/l10n';
 import { downloadVerified, ensureFreeSpace, extractArchive, findFile, type DownloadOptions } from './download.ts';
 import { LLAMA_BUILD, MODELS, llamaAssetFor, llamaIncompatibility, platformKey, type LlamaAsset, type ModelSize } from './manifest.ts';
 
@@ -39,7 +40,7 @@ export class Installer {
 
   /** 自動で入れる llama.cpp をこの環境で使えない理由。使えるなら undefined */
   get unsupportedReason(): string | undefined {
-    if (!this.llamaAsset) return `このプラットフォーム（${this.platform}）向けの llama.cpp は用意していません`;
+    if (!this.llamaAsset) return l10n.t('No prebuilt llama.cpp is available for this platform ({0})', this.platform);
     return llamaIncompatibility(this.llamaAsset, this.glibc());
   }
 
@@ -79,7 +80,7 @@ export class Installer {
     await rm(tmp, { recursive: true, force: true });
     try {
       await extractArchive(archive, tmp);
-      if (!(await findFile(tmp, SERVER_NAMES))) throw new Error(`展開したファイルに llama-server が見つかりません: ${asset.name}`);
+      if (!(await findFile(tmp, SERVER_NAMES))) throw new Error(l10n.t('llama-server was not found in the extracted files: {0}', asset.name));
       await rm(this.llamaDir, { recursive: true, force: true });
       await rename(tmp, this.llamaDir);
     } finally {
@@ -87,7 +88,7 @@ export class Installer {
       await rm(archive, { force: true });
     }
     const server = await this.findLlamaServer();
-    if (!server) throw new Error('llama-server の配置に失敗しました');
+    if (!server) throw new Error(l10n.t('Failed to install llama-server'));
     return server;
   }
 

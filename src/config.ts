@@ -74,10 +74,16 @@ export function readConfig(): ExtensionConfig {
   };
 }
 
+/** 画面に出すモデルの名前（例: 2B (1.8 GB)） */
+export function modelLabel(size: ModelSize): string {
+  const m = MODELS[size];
+  return vscode.l10n.t('{0} ({1} GB)', m.label, (m.bytes / 1e9).toFixed(1));
+}
+
 /** エラーメッセージなどに出す、サーバーの呼び名 */
 export function serverLabel(c: ExtensionConfig): string {
   if (c.serverMode === 'external') return c.endpoint;
-  return c.modelPath ? `自動管理・${c.modelPath}` : `自動管理・${MODELS[c.model].label}`;
+  return vscode.l10n.t('Managed: {0}', c.modelPath || modelLabel(c.model));
 }
 
 export function toTranslatorSettings(c: ExtensionConfig): TranslatorSettings {

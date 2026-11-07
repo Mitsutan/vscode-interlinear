@@ -355,7 +355,7 @@ export async function run(): Promise<void> {
           await waitFor('needsSetup', () => api.server.needsSetup);
           const d = await openTs('// Needs setup first.\nf();');
           const text = await hoverText(d, 0, 5);
-          assert.match(text, /セットアップを実行してください/);
+          assert.match(text, /Run setup/);
           assert.match(text, /command:interlinear\.setup/);
         } finally {
           await setConfig('server.mode', undefined);
@@ -404,7 +404,7 @@ export async function run(): Promise<void> {
         try {
           await setConfig('endpoint', `http://127.0.0.1:${(other.address() as AddressInfo).port}`);
           const text = await hoverText(doc, 4, 6);
-          assert.match(text, /llama-server ではありません/);
+          assert.match(text, /is not llama-server/);
         } finally {
           await setConfig('endpoint', mock.url);
           await new Promise<void>((resolve) => other.close(() => resolve()));
@@ -416,8 +416,8 @@ export async function run(): Promise<void> {
       async () => {
         await mock.close();
         const text = await hoverText(doc, 4, 6);
-        assert.match(text, /翻訳できませんでした/);
-        assert.match(text, /接続できません/);
+        assert.match(text, /Translation failed/);
+        assert.match(text, /Cannot connect/);
         assert.equal(api.service.serverState.status, 'down');
       },
     ],

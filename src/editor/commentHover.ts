@@ -63,7 +63,7 @@ export class CommentHoverProvider implements vscode.HoverProvider {
   private errorHover(e: unknown, range: vscode.Range): vscode.Hover {
     const md = new vscode.MarkdownString('', true);
     const message = e instanceof Error ? e.message : String(e);
-    md.appendMarkdown(`$(warning) 翻訳できませんでした: ${escapeMarkdown(message)}\n\n`);
+    md.appendMarkdown(`$(warning) ${vscode.l10n.t('Translation failed: {0}', escapeMarkdown(message))}\n\n`);
     if (e instanceof ServerUnavailableError || e instanceof TypeError) {
       const actions = this.actions();
       md.isTrusted = { enabledCommands: actions.map((a) => a.command) };

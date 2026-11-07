@@ -535,8 +535,19 @@ export async function run(): Promise<void> {
       },
     ]);
 
+    // README の画像。en は英語の README 用（日本語のコメントを英語に訳す）、ja は日本語の README 用（英語のコメントを日本語に訳す）。
+    // 既定で ja を撮らないのは、テスト用の VS Code が英語で表示されるため。撮り直すと、ホバーの下の「ローカル翻訳」などが英語になってしまう
+    const readmeLangs = (process.env.INTERLINEAR_SCREENSHOT_LANGS ?? 'en').split(',');
+    const readmeShots = [
+      // 英語版のドキュメントのホバーに fixture の関数を使うのは、標準ライブラリのドキュメントは英語で、英語には訳さないため
+      { lang: 'en', fixture: 'showcase-ja.ts', suffix: '.en', comment: '待ち時間は', doc: { line: 'await sleep(', word: 'sleep' } },
+      // 説明の短い Math.random にするのは、ホバーの高さに上限があり、長い説明だと訳文がスクロールの先に隠れるため
+      { lang: 'ja', fixture: 'showcase.ts', suffix: '', comment: 'The delay doubles', doc: { line: 'Math.random', word: 'random' } },
+    ].filter((s) => readmeLangs.includes(s.lang));
+    const translated = /Local translation|ローカル翻訳/;
+
     tests.push([
-      'スクリーンショット: test/fixtures/showcase.ts の行末表示とホバー（README 用）',
+      `スクリーンショット: README 用の行末表示とホバー（${readmeShots.map((s) => s.fixture).join('、')}）`,
       async () => {
         await setConfig('endpoint', e2eEndpoint);
         // 前のテストのタブ、通知、サイドバーを写さない
@@ -555,46 +566,51 @@ export async function run(): Promise<void> {
         for (const [section, key, value] of look) {
           await vscode.workspace.getConfiguration(section).update(key, value, vscode.ConfigurationTarget.Global);
         }
-        const sample = fixture('showcase.ts');
-        const open = async () => vscode.window.showTextDocument(await vscode.workspace.openTextDocument(sample));
+        const targetLanguage = config().inspect('targetLanguage')?.globalValue;
         // テーマを比べるときは、INTERLINEAR_SCREENSHOT_THEMES にカンマ区切りで指定する（画像の名前にテーマ名が付く）
         const themes = process.env.INTERLINEAR_SCREENSHOT_THEMES?.split(',') ?? ['Dark Modern'];
         try {
-          for (const theme of themes) {
-            await vscode.workspace.getConfiguration('workbench').update('colorTheme', theme, vscode.ConfigurationTarget.Global);
-            const suffix = themes.length > 1 ? `-${theme.toLowerCase().replace(/\W+/g, '')}` : '';
-            await closeAllEditors();
-            const editor = await open();
-            // 開き直しても前のカーソル位置が戻るので、先頭に置く
-            editor.selection = new vscode.Selection(0, 0, 0, 0);
-            const lineOf = (text: string) => editor.document.getText().split('\n').findIndex((l) => l.includes(text));
+          for (const shot of readmeShots) {
+            await setConfig('targetLanguage', shot.lang);
+            const sample = fixture(shot.fixture);
+            const open = async () => vscode.window.showTextDocument(await vscode.workspace.openTextDocument(sample));
+            for (const theme of themes) {
+              await vscode.workspace.getConfiguration('workbench').update('colorTheme', theme, vscode.ConfigurationTarget.Global);
+              const suffix = `${themes.length > 1 ? `-${theme.toLowerCase().replace(/\W+/g, '')}` : ''}${shot.suffix}`;
+              await closeAllEditors();
+              const editor = await open();
+              // 開き直しても前のカーソル位置が戻るので、先頭に置く
+              editor.selection = new vscode.Selection(0, 0, 0, 0);
+              const lineOf = (text: string) => editor.document.getText().split('\n').findIndex((l) => l.includes(text));
 
-            // README では JSDoc にも訳文が並ぶ all を見せる（既定の short との違いは README に書く）
-            await showInline(sample, 'all');
-            await shoot(`readme-inline-all${suffix}`);
-            await setConfig('inlineTranslation', 'short');
+              // README では JSDoc にも訳文が並ぶ all を見せる（既定の short との違いは README に書く）
+              await showInline(sample, 'all');
+              await shoot(`readme-inline-all${suffix}`);
+              await setConfig('inlineTranslation', 'short');
 
-            const comment = new vscode.Position(lineOf('The delay doubles'), 8);
-            let text = '';
-            await waitFor('comment hover', () => /[\p{Script=Hiragana}\p{Script=Han}]/u.test(text), 60_000, async () => {
-              text = await hoverText(editor.document, comment.line, comment.character);
-            });
-            await showHoverAt(editor, comment);
-            await shoot(`readme-hover${suffix}`);
+              const comment = new vscode.Position(lineOf(shot.comment), 8);
+              let text = '';
+              await waitFor('comment hover', () => translated.test(text), 60_000, async () => {
+                text = await hoverText(editor.document, comment.line, comment.character);
+              });
+              await showHoverAt(editor, comment);
+              await shoot(`readme-hover${suffix}`);
 
-            // 説明の短い Math.random にするのは、ホバーの高さに上限があり、長い説明だと訳文がスクロールの先に隠れるため
-            const random = new vscode.Position(lineOf('Math.random'), editor.document.lineAt(lineOf('Math.random')).text.indexOf('random') + 2);
-            text = '';
-            await waitFor('documentation hover', () => /Local translation/.test(text), 120_000, async () => {
-              text = await hoverText(editor.document, random.line, random.character);
-            });
-            // 開き直すのは、コマンドで開いたホバーはカーソルを動かしても閉じず、次のホバーが出ないため
-            await closeAllEditors();
-            await showHoverAt(await open(), random);
-            await shoot(`readme-doc-hover${suffix}`);
-            await setConfig('inlineTranslation', 'off');
+              const docLine = lineOf(shot.doc.line);
+              const doc = new vscode.Position(docLine, editor.document.lineAt(docLine).text.indexOf(shot.doc.word) + 2);
+              text = '';
+              await waitFor('documentation hover', () => translated.test(text), 120_000, async () => {
+                text = await hoverText(editor.document, doc.line, doc.character);
+              });
+              // 開き直すのは、コマンドで開いたホバーはカーソルを動かしても閉じず、次のホバーが出ないため
+              await closeAllEditors();
+              await showHoverAt(await open(), doc);
+              await shoot(`readme-doc-hover${suffix}`);
+              await setConfig('inlineTranslation', 'off');
+            }
           }
         } finally {
+          await setConfig('targetLanguage', targetLanguage);
           await setConfig('inlineTranslation', 'off');
           await vscode.workspace.getConfiguration('workbench').update('colorTheme', undefined, vscode.ConfigurationTarget.Global);
           for (const [section, key] of look) {

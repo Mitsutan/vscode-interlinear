@@ -47,7 +47,14 @@ try {
     extensionTestsPath: path.join(root, 'dist-test', 'suite.cjs'),
     // 実モデルでの確認: INTERLINEAR_E2E_ENDPOINT=http://127.0.0.1:18080 npm run test:integration
     extensionTestsEnv: Object.fromEntries(
-      ['INTERLINEAR_E2E_ENDPOINT', 'INTERLINEAR_SCREENSHOT_DIR', 'INTERLINEAR_SCREENSHOT_THEMES', 'INTERLINEAR_REAL_LLAMA_SERVER', 'INTERLINEAR_REAL_MODEL'].flatMap((k) => (process.env[k] ? [[k, process.env[k]]] : [])),
+      [
+        'INTERLINEAR_E2E_ENDPOINT',
+        'INTERLINEAR_SCREENSHOT_DIR',
+        'INTERLINEAR_SCREENSHOT_THEMES',
+        'INTERLINEAR_SCREENSHOT_LANGS',
+        'INTERLINEAR_REAL_LLAMA_SERVER',
+        'INTERLINEAR_REAL_MODEL',
+      ].flatMap((k) => (process.env[k] ? [[k, process.env[k]]] : [])),
     ),
     launchArgs: [
       '--no-sandbox',

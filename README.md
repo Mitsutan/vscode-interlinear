@@ -1,135 +1,141 @@
 # Interlinear
 
-ソースコードのコメントと、ホバーで表示されるドキュメントを、**このコンピューターの中だけで**翻訳して表示する VS Code 拡張機能です。ソースは書き換えません。コードや訳文を外部のサービスに送ることもありません。
+English | [日本語](README.ja.md)
 
-翻訳には、Preferred Networks の翻訳特化モデル [PLaMo 3 Translate](https://www.preferred.jp/ja/blog/tech/plamo-3-translate-weight-release) を [llama.cpp](https://github.com/ggml-org/llama.cpp) で動かして使います。
+A VS Code extension that translates code comments and hover documentation **entirely on your computer**. It never modifies your source code, and it never sends your code or the translations to an external service. It helps when you read code whose comments are written in a language you don't read, such as Japanese.
 
-![コメントの右側に、訳文が薄い文字で並んでいる VS Code の画面](images/screenshot-inline-all.png)
+Translation is done by [PLaMo 3 Translate](https://www.preferred.jp/en/blog/tech/plamo-3-translate-weight-release), a translation model by Preferred Networks, running on [llama.cpp](https://github.com/ggml-org/llama.cpp).
 
-この README の画像は、8B のモデルで撮影したものです。
+![VS Code with English translations shown in faint text to the right of Japanese comments](images/screenshot-inline-all.en.png)
 
-## できること
+The images in this README were taken with the 8B model.
 
-- **コメントのホバー翻訳**: コメントにマウスを置くと、訳文が表示されます。
-  - 対象は、行コメント、ブロックコメント、JSDoc、Python の docstring です。
-  - JSDoc の `@param name` などのタグやコード例は、そのまま残します。
+## Features
 
-  ![JSDoc にマウスを置くと、タグを残したまま訳文がホバーに表示される](images/screenshot-hover.png)
+- **Comment hover**: Hover over a comment to see its translation.
+  - Works with line comments, block comments, JSDoc, and Python docstrings.
+  - Tags such as `@param name` and code examples in JSDoc are kept as they are.
 
-- **ドキュメントの翻訳**: 関数やクラスにマウスを置いたときに言語サーバーが出す説明に、訳文を追加します。標準ライブラリや `node_modules` の説明も対象です。
+  ![Hovering over a JSDoc comment shows its translation, with the tags kept](images/screenshot-hover.en.png)
 
-  ![Math.random の説明の下に、その訳文が追加されている](images/screenshot-doc-hover.png)
+- **Documentation hover**: When you hover over a function or class, the description shown by the language server gets a translation added below it. This also covers the standard library and `node_modules`.
 
-- **行末の訳文表示**: コメントの右側に、訳文を薄い文字で常に表示します。
-  - 長い訳文は省略し、全文はホバーで読めます。
-  - 表示する範囲は設定で選べます。既定では行コメントと1行のコメントに表示します。冒頭の画像は、JSDoc なども含める `all` にした場合です。
-- **先読みとキャッシュ**: 画面に見えているコメントを先に訳しておきます。訳文は保存され、VS Code を再起動しても残ります。
-- **訳さないもの**: ディレクティブ（`eslint-disable` など）、ライセンスヘッダ、コメントアウトされたコード、すでに出力言語で書かれたコメントは訳しません。
+  ![The Japanese description of a function is followed by its English translation](images/screenshot-doc-hover.en.png)
 
-対応言語: TypeScript / TSX / JavaScript / Python / Go / Rust / Java / C# / C / C++ / Ruby / PHP / Shell / CSS / PowerShell
+- **Inline translations**: Translations are always shown in faint text to the right of comments.
+  - Long translations are truncated; hover to read the full text.
+  - You can choose which comments show them. By default, they appear on line comments and single-line comments. The image at the top uses `all`, which also includes JSDoc and other multi-line blocks.
+- **Prefetching and caching**: Comments visible on screen are translated in advance. Translations are saved and survive a restart of VS Code.
+- **What is not translated**: Directives (such as `eslint-disable`), license headers, commented-out code, and comments already written in the output language.
 
-## はじめかた
+Supported languages: TypeScript / TSX / JavaScript / Python / Go / Rust / Java / C# / C / C++ / Ruby / PHP / Shell / CSS / PowerShell
 
-1. 拡張機能をインストールし、対応言語のファイルを開きます。
-2. 「翻訳モデルのダウンロードが必要です」と表示されたら **セットアップ** を選びます。ステータスバーの `翻訳: セットアップ` からでも始められます。
-3. モデルの大きさを選び、ライセンスに同意すると、ダウンロードが始まります。
+### Output language
 
-| モデル | サイズ | 目安 |
+The output language follows the VS Code display language: `ja` if it is Japanese, `en` otherwise. To use another language, set `interlinear.targetLanguage`. According to its [model card](https://huggingface.co/pfnet/plamo-3-translate-2b-GGUF), PLaMo 3 Translate supports translation among 53 languages.
+
+## Getting started
+
+1. Install the extension and open a file in a supported language.
+2. When you see "Translating comments requires downloading a translation model", choose **Set Up**. You can also start from `Translation: Set Up` in the status bar.
+3. Choose a model size and accept the license. The download starts.
+
+| Model | Size | Notes |
 |---|---|---|
-| 0.8B | 0.6 GB | 軽量です。GPU のない環境向けです |
-| **2B（推奨）** | 1.8 GB | Apple Silicon なら、コメント1件あたり 1 秒未満で訳せます |
-| 8B | 5.3 GB | 訳の質が最も高い代わりに、2B の約 3 倍の時間がかかります |
+| 0.8B | 0.6 GB | Lightweight. For machines without a GPU |
+| **2B (recommended)** | 1.8 GB | Under 1 second per comment on Apple Silicon |
+| 8B | 5.3 GB | Best quality, but takes about 3 times as long as 2B |
 
-ダウンロードが終わると、翻訳サーバー（llama-server）を拡張が自動で起動・停止します。
+Once the download is complete, the extension starts and stops the translation server (llama-server) for you.
 
-- ポートは空いているものを自動で使います。
-- しばらく使われなければ、サーバーを止めてメモリを空けます。
+- It uses a free port automatically.
+- When the server has not been used for a while, it is stopped to free memory.
 
-### 自分で起動したサーバーを使う
+### Using your own server
 
-設定 `interlinear.server.mode` を `external` にし、`interlinear.endpoint` にサーバーの URL を指定します。
+Set `interlinear.server.mode` to `external`, and set `interlinear.endpoint` to the URL of your server.
 
-たとえば、GPU のある別のマシンで llama-server を動かしている場合に使います。モデル（GGUF）は [Hugging Face](https://huggingface.co/pfnet/plamo-3-translate-2b-GGUF) から入手し、次のように起動します。
+This is useful when, for example, you run llama-server on another machine with a GPU. Get a model (GGUF) from [Hugging Face](https://huggingface.co/pfnet/plamo-3-translate-2b-GGUF) and start the server like this:
 
 ```bash
 llama-server -m plamo-3-translate-2b-Q4_K_M.gguf -c 8192 -np 2 --port 18080
 ```
 
-- `-np`（同時に処理するリクエストの数）は、`interlinear.maxConcurrentRequests` と同じ値にします。
-- 別のマシンから接続する場合は `--host 0.0.0.0` を付けます。同じネットワークの誰からでも接続できるようになる点に注意してください。
+- Set `-np` (the number of requests processed at the same time) to the same value as `interlinear.maxConcurrentRequests`.
+- To connect from another machine, add `--host 0.0.0.0`. Note that anyone on the same network can then connect to the server.
 
-### リモート開発（Dev Container / SSH / WSL）
+### Remote development (Dev Containers / SSH / WSL)
 
-この拡張は、リモートのウィンドウでも、VS Code を開いているコンピューター（ローカル）側で動きます。翻訳サーバーもローカルで動くので、Mac から Dev Container を開いていても GPU（Metal）で翻訳します。モデルもローカルに一度ダウンロードすれば、コンテナごとにダウンロードし直す必要はありません。
+In a remote window, this extension still runs on the computer where VS Code is open (the local side). The translation server also runs locally, so even when you open a Dev Container from a Mac, translation uses the GPU (Metal). You download the model once locally; there is no need to download it again for each container.
 
-リモート側で翻訳したい場合（GPU のある SSH 先など）は、ユーザー設定に次を追加します。
+To translate on the remote side instead (for example, on an SSH host with a GPU), add the following to your user settings:
 
 ```json
 "remote.extensionKind": { "mitsutan.interlinear": ["workspace"] }
 ```
 
-## 設定
+## Settings
 
-| 設定 | 既定値 | 内容 |
+| Setting | Default | Description |
 |---|---|---|
-| `interlinear.enabled` | `true` | 翻訳の有効・無効 |
-| `interlinear.translateDocumentation` | `true` | ホバーで出るドキュメントも翻訳する |
-| `interlinear.inlineTranslation` | `short` | コメントの右側に訳文を出す範囲<br>`off`: 出さない<br>`short`: 行コメントと1行のコメント<br>`all`: JSDoc なども含める |
-| `interlinear.inlineMaxWidth` | `120` | コードと右側の訳文を合わせた1行の表示幅（全角は2桁）。編集領域の幅に合わせます |
-| `interlinear.targetLanguage` | （空） | 出力言語（`ja`、`en`、`zh`、`ko` など）。空なら VS Code の表示言語に合わせます（日本語なら `ja`、それ以外は `en`）。VS Code を英語で表示していて日本語に訳したい場合は `ja` を指定します |
-| `interlinear.sourceLanguage` | （空） | 入力言語。空ならモデルが判定します |
-| `interlinear.form` | `plain` | 日本語の文体<br>`plain`: 常体<br>`polite`: 敬体<br>`none`: 指定しない |
-| `interlinear.useContext` | `true` | ファイル名と関連するコード行を、翻訳の参考情報として渡す |
-| `interlinear.glossary` | `[]` | 用語集。例: `[{ "source": "widget", "target": "ウィジェット" }]` |
-| `interlinear.prefetch` | `true` | 画面内のコメントを先に訳しておく |
-| `interlinear.server.mode` | `managed` | `managed`: 拡張がサーバーを管理する<br>`external`: 自分で起動したサーバーを使う |
-| `interlinear.server.model` | `2b` | `managed` で使うモデル（`0.8b` / `2b` / `8b`） |
-| `interlinear.server.idleTimeoutMinutes` | `15` | 使われなくなってからサーバーを止めるまでの時間（分）。`0` なら止めない |
-| `interlinear.server.llamaServerPath` | （空） | 自分で用意した llama-server のパス。CUDA 版などの GPU 版を使う場合に指定します |
-| `interlinear.server.modelPath` | （空） | 自分で用意したモデル（GGUF）のパス |
-| `interlinear.endpoint` | `http://127.0.0.1:18080` | `external` で使うサーバーの URL |
-| `interlinear.maxConcurrentRequests` | `2` | 同時に送る翻訳リクエストの数 |
+| `interlinear.enabled` | `true` | Enable or disable translation |
+| `interlinear.translateDocumentation` | `true` | Also translate documentation shown in hovers |
+| `interlinear.inlineTranslation` | `short` | Which comments show translations to their right<br>`off`: none<br>`short`: line comments and single-line comments<br>`all`: also JSDoc and other multi-line blocks |
+| `interlinear.inlineMaxWidth` | `120` | Width of a line including the code and the translation to its right (full-width characters count as 2). Adjust it to the width of your editor |
+| `interlinear.targetLanguage` | (empty) | Output language (`ja`, `en`, `zh`, `ko`, etc.). If empty, follows the VS Code display language (`ja` for Japanese, `en` otherwise) |
+| `interlinear.sourceLanguage` | (empty) | Input language. If empty, the model detects it |
+| `interlinear.form` | `plain` | Style used when translating into Japanese<br>`plain`: plain style (da / de aru)<br>`polite`: polite style (desu / masu)<br>`none`: not specified |
+| `interlinear.useContext` | `true` | Pass the file name and related code lines to the model as reference for translation |
+| `interlinear.glossary` | `[]` | Glossary. Example: `[{ "source": "注文", "target": "order" }]` |
+| `interlinear.prefetch` | `true` | Translate comments on screen in advance |
+| `interlinear.server.mode` | `managed` | `managed`: the extension manages the server<br>`external`: use a server you started yourself |
+| `interlinear.server.model` | `2b` | Model used in `managed` mode (`0.8b` / `2b` / `8b`) |
+| `interlinear.server.idleTimeoutMinutes` | `15` | Minutes of inactivity before the server is stopped. `0` means never stop |
+| `interlinear.server.llamaServerPath` | (empty) | Path to your own llama-server. Set this to use a GPU build, such as the CUDA build |
+| `interlinear.server.modelPath` | (empty) | Path to your own model (GGUF) |
+| `interlinear.endpoint` | `http://127.0.0.1:18080` | URL of the server used in `external` mode |
+| `interlinear.maxConcurrentRequests` | `2` | Number of translation requests sent at the same time |
 
-コマンドパレットで「Interlinear」と入力すると、次のコマンドを使えます。ステータスバーの項目をクリックしても、同じメニューが開きます。
+Type "Interlinear" in the Command Palette to use the following commands. Clicking the status bar item opens the same menu.
 
-- セットアップ（モデルの変更もここから）
-- 翻訳の有効・無効の切り替え
-- 行末表示の切り替え
-- サーバーの再起動
-- ログの表示
-- ダウンロードしたモデルの削除
-- キャッシュの削除
+- Set up (also used to change the model)
+- Toggle translation
+- Toggle inline translations
+- Restart the server
+- Show the log
+- Remove downloaded models
+- Clear the cache
 
-## プライバシー
+## Privacy
 
-- 翻訳はすべて、VS Code を開いているこのコンピューターで行います（リモート側で動くよう設定した場合は、リモート側）。コードも訳文も外部に送りません。
-- 通信するのはセットアップのときだけです。ダウンロード元は llama.cpp（GitHub）とモデル（Hugging Face）で、取得するファイルのバージョンと SHA-256 は拡張に固定してあります。中身が一致しなければ使いません。
+- All translation happens on the computer where VS Code is open (or on the remote side, if you configured the extension to run there). Neither your code nor the translations are sent anywhere.
+- The extension only accesses the network during setup. It downloads llama.cpp (from GitHub) and the model (from Hugging Face). The versions and SHA-256 hashes of these files are pinned in the extension, and a file is not used unless its hash matches.
 
-## 動作環境
+## Requirements
 
-| 項目 | 内容 |
+| Item | Details |
 |---|---|
-| OS | macOS（Apple Silicon / Intel）、Linux（x64 / arm64）、Windows（x64 / arm64） |
-| Linux の glibc | 自動で入れる llama.cpp には、x64 では glibc 2.34 以上（Ubuntu 22.04、Debian 12 以降）、arm64 では glibc 2.38 以上（Ubuntu 24.04、Debian 13 以降）が必要です。古い環境では、llama-server を自分でビルドして `interlinear.server.llamaServerPath` で指定してください |
-| GPU | 自動で入れる llama.cpp は、macOS では GPU（Metal）を使い、Linux と Windows では CPU 版です。GPU を使う場合は、GPU 版の llama-server を入れて `interlinear.server.llamaServerPath` で指定してください |
-| メモリ | モデルの大きさ程度（2B で約 2 GB）の空きが必要です |
+| OS | macOS (Apple Silicon / Intel), Linux (x64 / arm64), Windows (x64 / arm64) |
+| glibc on Linux | The automatically installed llama.cpp requires glibc 2.34 or later on x64 (Ubuntu 22.04, Debian 12, or later) and glibc 2.38 or later on arm64 (Ubuntu 24.04, Debian 13, or later). On older systems, build llama-server yourself and set it in `interlinear.server.llamaServerPath` |
+| GPU | The automatically installed llama.cpp uses the GPU (Metal) on macOS, and is a CPU build on Linux and Windows. To use a GPU there, install a GPU build of llama-server and set it in `interlinear.server.llamaServerPath` |
+| Memory | Free memory roughly the size of the model (about 2 GB for 2B) |
 
-## うまく動かないとき
+## Troubleshooting
 
-ステータスバーの項目にマウスを置くか、コメントにホバーすると、理由が表示されます。
+Hover over the status bar item, or hover over a comment, to see the reason.
 
-| 表示 | 対処 |
+| Message | What to do |
 |---|---|
-| 翻訳モデルがまだダウンロードされていません | セットアップを実行します |
-| llama-server が起動直後に終了しました | 「翻訳サーバーのログを表示する」で原因を確認します |
-| 自動で入れる llama.cpp には glibc … 以上が必要です | Linux が古いため、自動で入れる llama.cpp が動きません。新しいディストリを使うか、llama-server を自分で用意して `server.llamaServerPath` で指定するか、外部サーバーを使います |
-| 翻訳サーバー（…）に接続できません | `external` の場合は、サーバーが起動しているか、`endpoint` のホスト・ポートが合っているかを確認します |
-| …で応答したのは llama-server ではありません | そのポートは別のアプリが使っています。サーバーを別のポートで起動し、`endpoint` も合わせます |
+| The translation model has not been downloaded yet | Run setup |
+| llama-server exited right after starting | Check the cause with "Show Translation Server Log" |
+| The automatically installed llama.cpp requires glibc … or later | Your Linux is too old for the automatically installed llama.cpp. Use a newer distribution, provide your own llama-server and set it in `server.llamaServerPath`, or use an external server |
+| Cannot connect to the translation server (…) | In `external` mode, check that the server is running and that the host and port in `endpoint` are correct |
+| The server responding at … is not llama-server | Another app is using that port. Start the server on another port and update `endpoint` to match |
 
-## ライセンス
+## License
 
-- **この拡張機能**: [MIT License](LICENSE)
-- **翻訳モデル**: PLaMo 3 Translate は [PLaMo Community License](https://plamo.preferredai.jp/info/plamo-community-license-ja) で提供されています（Built with PLaMo）。
-  - 個人利用、学術を含む非商用利用は無償で、登録も不要です。
-  - 商用利用には事前の登録が必要です。売上が 10 億円を超える場合は、別途契約が必要です。
-- **その他**: 同梱・利用しているソフトウェアについては [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
+- **This extension**: [MIT License](LICENSE)
+- **Translation model**: PLaMo 3 Translate is provided under the [PLaMo Community License](https://plamo.preferredai.jp/info/plamo-community-license-en) (Built with PLaMo).
+  - Personal use and non-commercial use, including academic use, are free and require no registration.
+  - Commercial use requires registration in advance. If your revenue exceeds JPY 1 billion, a separate agreement is required.
+- **Other software**: See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the software bundled with or used by this extension.

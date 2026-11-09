@@ -132,6 +132,7 @@ llama-server -m plamo-3-translate-2b-Q4_K_M.gguf -c 8192 -np 2 --port 18080
 
 - **この拡張機能**: [MIT License](LICENSE)
 - **翻訳モデル**: PLaMo 3 Translate は [PLaMo Community License](https://plamo.preferredai.jp/info/plamo-community-license-ja) で提供されています（Built with PLaMo）。
+- **README の画像**: 写っている訳文は PLaMo 3 Translate の出力です。これを学習に使ったモデルには、PLaMo Community License の条件が適用されます。
   - 個人利用、学術を含む非商用利用は無償で、登録も不要です。
   - 商用利用には事前の登録が必要です。売上が 10 億円を超える場合は、別途契約が必要です。
 - **その他**: 同梱・利用しているソフトウェアについては [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。

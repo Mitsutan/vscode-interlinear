@@ -111,5 +111,5 @@ export const MODELS: Readonly<Record<ModelSize, ModelInfo>> = {
 };
 
 export const LICENSE_URL = 'https://plamo.preferredai.jp/info/plamo-community-license-ja';
-/** 同意を記録するときの版。条件が変わったら上げて、同意を取り直す */
-export const LICENSE_CONSENT_VERSION = 'plamo-community-license-2026-11';
+/** 同意を記録するときの版。ライセンスの改定日にして、どの版への同意かを分かるようにする。条件が変わったら上げて、同意を取り直す */
+export const LICENSE_CONSENT_VERSION = 'plamo-community-license-2026-11-09';

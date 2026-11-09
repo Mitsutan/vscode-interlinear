@@ -12,7 +12,7 @@ import { promisify } from 'node:util';
 import { IntegrityError, downloadVerified, extractArchive, findFile } from '../../src/managed/download.ts';
 import { Installer } from '../../src/managed/installer.ts';
 import { ManagedServer } from '../../src/managed/managedServer.ts';
-import { LLAMA_ASSETS, MODELS, llamaIncompatibility } from '../../src/managed/manifest.ts';
+import { LLAMA_ASSETS, MODELS, licenseUrl, llamaIncompatibility } from '../../src/managed/manifest.ts';
 
 const work = await mkdtemp(path.join(tmpdir(), 'interlinear-managed-'));
 after(() => rm(work, { recursive: true, force: true }));
@@ -58,6 +58,16 @@ test('manifest: Linux 版は必要な glibc より古い環境と、glibc でな
   assert.match(llamaIncompatibility(linux, '2.4') ?? '', /2\.38 or later/); // 文字列ではなく数値で比べる
   assert.match(llamaIncompatibility(linux, undefined) ?? '', /musl/);
   assert.equal(llamaIncompatibility(LLAMA_ASSETS['darwin-arm64']!, undefined), undefined);
+});
+
+test('manifest: ライセンスの本文は、表示言語が日本語なら日本語版、それ以外なら英語版を開く', () => {
+  const ja = 'https://plamo.preferredai.jp/info/plamo-community-license-ja';
+  const en = 'https://plamo.preferredai.jp/info/plamo-community-license-en';
+  assert.equal(licenseUrl('ja'), ja);
+  assert.equal(licenseUrl('en'), en);
+  assert.equal(licenseUrl('en-US'), en);
+  assert.equal(licenseUrl('zh-cn'), en);
+  assert.equal(licenseUrl(''), en);
 });
 
 test('download: ハッシュが一致したときだけ保存し、進捗を知らせる', async () => {

@@ -136,6 +136,7 @@ Hover over the status bar item, or hover over a comment, to see the reason.
 
 - **This extension**: [MIT License](LICENSE)
 - **Translation model**: PLaMo 3 Translate is provided under the [PLaMo Community License](https://plamo.preferredai.jp/info/plamo-community-license-en) (Built with PLaMo).
+- **Images in this README**: The translations shown are output of PLaMo 3 Translate. The terms of the PLaMo Community License apply to any model trained using them.
   - Personal use and non-commercial use, including academic use, are free and require no registration.
   - Commercial use requires registration in advance. If your revenue exceeds JPY 1 billion, a separate agreement is required.
 - **Other software**: See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the software bundled with or used by this extension.

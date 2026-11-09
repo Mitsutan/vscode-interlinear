@@ -110,6 +110,13 @@ export const MODELS: Readonly<Record<ModelSize, ModelInfo>> = {
   '8b': model('8b', '2234f168757f570714b333049c9d018161ec5277', 5280442080, '47a04e86a67bcc352fa186f01159060aae594b73993e1d49dbfc0ef0081d01ad'),
 };
 
-export const LICENSE_URL = 'https://plamo.preferredai.jp/info/plamo-community-license-ja';
-/** 同意を記録するときの版。条件が変わったら上げて、同意を取り直す */
-export const LICENSE_CONSENT_VERSION = 'plamo-community-license-2026-11';
+/**
+ * ライセンスの本文の URL を、VS Code の表示言語（vscode.env.language）に合わせて選ぶ。
+ * 本文は日本語版と英語版しかないので、日本語以外の表示言語では英語版にする。
+ */
+export function licenseUrl(displayLanguage: string): string {
+  const lang = displayLanguage.toLowerCase().split('-')[0] === 'ja' ? 'ja' : 'en';
+  return `https://plamo.preferredai.jp/info/plamo-community-license-${lang}`;
+}
+/** 同意を記録するときの版。ライセンスの改定日にして、どの版への同意かを分かるようにする。条件が変わったら上げて、同意を取り直す */
+export const LICENSE_CONSENT_VERSION = 'plamo-community-license-2026-11-09';

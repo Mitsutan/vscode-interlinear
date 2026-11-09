@@ -171,4 +171,4 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
    - Linux 版の `minGlibc`: 展開したファイルを `readelf -V --wide` で調べ、`GLIBC_` の最大のバージョンにする（arm64 と x64 でビルド環境が違う）。
    - モデル: Hugging Face のコミット・サイズ・SHA-256（LFS のハッシュ）。
 2. `npm run check:manifest` で、URL とサイズを確かめる。PR を作ると、`downloads.yml` が各 OS で実物を確かめる。
-3. ライセンスの条件が変わったら、`LICENSE_CONSENT_VERSION` を上げる。利用者に同意を取り直すため。
+3. ライセンスの条件が変わったら、`LICENSE_CONSENT_VERSION` をその改定日に上げる。利用者に同意を取り直すため。

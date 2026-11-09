@@ -9,9 +9,9 @@ import { Installer } from '../managed/installer.ts';
 import { ManagedServer, NotReadyError } from '../managed/managedServer.ts';
 import {
   LICENSE_CONSENT_VERSION,
-  LICENSE_URL,
   MODELS,
   MODEL_SIZES,
+  licenseUrl,
   llamaAssetFor,
   type ModelSize,
 } from '../managed/manifest.ts';
@@ -271,7 +271,7 @@ export class ServerController implements vscode.Disposable {
         read,
       );
       if (picked === read) {
-        await vscode.env.openExternal(vscode.Uri.parse(LICENSE_URL));
+        await vscode.env.openExternal(vscode.Uri.parse(licenseUrl(vscode.env.language)));
         continue;
       }
       if (picked !== accept) return false;

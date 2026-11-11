@@ -168,8 +168,16 @@ export class TranslationService {
     return reassemble(unit.blocks, translations);
   }
 
-  /** 翻訳する。キャッシュにない段落だけをサーバーに投げる */
+  /** 翻訳して、元の構造に組み戻す */
   translate(unit: TranslatableText, priority: Priority): TaskHandle<string> {
+    const handle = this.translateBlocks(unit, priority);
+    const promise = handle.promise.then((translations) => reassemble(unit.blocks, translations));
+    promise.catch(() => {});
+    return { promise, cancel: handle.cancel };
+  }
+
+  /** 段落ごとに翻訳する（ブロックの番号 → 訳文）。キャッシュにない段落だけをサーバーに投げる */
+  translateBlocks(unit: TranslatableText, priority: Priority): TaskHandle<Map<number, string>> {
     const handles: TaskHandle<string>[] = [];
     let cancelled = false;
     const promise = (async () => {
@@ -189,7 +197,7 @@ export class TranslationService {
         waits.push(handle.promise.then((text) => void translations.set(index, text)));
       }
       await Promise.all(waits);
-      return reassemble(unit.blocks, translations);
+      return translations;
     })();
     promise.catch(() => {});
     return {

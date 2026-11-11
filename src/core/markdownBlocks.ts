@@ -1,21 +1,25 @@
 /**
  * ホバーに表示される Markdown（言語サーバーが返すドキュメント）を、翻訳する文章とそのまま残す部分に分ける。
  *
- * - コードブロック（シグネチャや @example）と区切り線は、元のホバーに表示されているので訳文には含めない
+ * - シグネチャ（定義）のコードブロックと区切り線は、元のホバーと重なるだけなので訳文には含めない。
+ *   区切り線で区切られた各部分で、文章より前にあるコードブロックをシグネチャとみなす。
+ *   多くの言語サーバーはシグネチャを先頭に置くが、clangd は区切り線の後ろの最後に置く
+ * - 本文中のコード（` ``` ` で囲んだものと、gopls などが使う字下げのもの）は、訳さずに元の形のまま残す。
+ *   元のホバーにもあるが、訳文だけを読んでも、前後の段落がどのコードを指しているかわかるようにするため
  * - TypeScript のタグ（`*@param* \`name\` — 説明`）は、タグ名と引数名を残して説明だけ訳す
  * - リンク先 URL はモデルに渡さず `L0` のような短い記号に置き換え、訳したあとで元に戻す。
- *   元のホバーが isTrusted（command: リンクを実行できる）でも、訳文に含まれるリンクは元の文書にあったものだけになる
+ *   元のホバーが isTrusted（command: リンクを実行できる）でも、訳文の段落に含まれるリンクは元の文書にあったものだけになる
  * - すでに出力言語で書かれた段落や、文章がほとんどない段落は訳さない
  */
 import { stripProtected } from './glossary.ts';
-import { isInTargetLanguage, joinLine, type Block } from './normalize.ts';
+import { isInTargetLanguage, joinLine, reassemble, type Block } from './normalize.ts';
 
 export interface SegmentedMarkdown {
-  /** 訳文として表示するブロック（コードブロックと区切り線は含まない） */
+  /** 訳文として表示するブロック（シグネチャのコードブロックと区切り線は含まない） */
   blocks: Block[];
   /** リンクの記号 L<n> に対応する元のリンク先（タイトル付きならタイトルも含む） */
   links: string[];
-  /** 最初のコードブロックの1行目。シンボルのシグネチャとして context に使う */
+  /** シグネチャとみなした最初のコードブロックの1行目。context に使う */
   signature?: string;
 }
 
@@ -30,9 +34,13 @@ const RULE = /^([-*_])(\s*\1){2,}$/;
 export function segmentMarkdown(markdown: string, targetLang: string): SegmentedMarkdown {
   const blocks: Block[] = [];
   let open: Extract<Block, { type: 'prose' }> | undefined;
-  let fence: string | undefined;
+  let fence: { marker: string; keep: boolean } | undefined;
   let signature: string | undefined;
+  /** 区切り線で区切られた今の部分で、シグネチャより後ろ（本文）に入ったか */
+  let inBody = false;
   let inExample = false;
+  /** 開いているリスト項目の本文が始まる桁 */
+  let listColumn: number | undefined;
 
   const verbatim = (text: string) => {
     open = undefined;
@@ -46,19 +54,12 @@ export function segmentMarkdown(markdown: string, targetLang: string): Segmented
   for (const line of markdown.split(/\r?\n/)) {
     const t = line.trim();
 
-    // コードブロックは表示しない（元のホバーにある）。最初のものの1行目をシグネチャとして覚える
+    // シグネチャのコードブロックは表示しない。最初のものの1行目をシグネチャとして覚える
     if (fence !== undefined) {
-      if (t.startsWith(fence)) {
-        fence = undefined;
-      } else if (signature === undefined && t !== '') {
-        signature = t.slice(0, 200);
-      }
-      open = undefined;
-      continue;
-    }
-    const fenceStart = /^(`{3,}|~{3,})/.exec(t);
-    if (fenceStart) {
-      fence = fenceStart[1]!;
+      const closing = t.startsWith(fence.marker);
+      if (fence.keep) verbatim(line);
+      else if (!closing && signature === undefined && t !== '') signature = t.slice(0, 200);
+      if (closing) fence = undefined;
       open = undefined;
       continue;
     }
@@ -68,10 +69,33 @@ export function segmentMarkdown(markdown: string, targetLang: string): Segmented
       verbatim('');
       continue;
     }
+
+    const leading = /^[ \t]*/.exec(line)![0];
+    const indent = columns(leading);
+    // 段落の途中の行は字下げに関係なく段落の続きなので、リストが終わるのは段落の外で浅い行が来たときだけ
+    if (open === undefined && listColumn !== undefined && indent < listColumn) listColumn = undefined;
+    // 字下げによるコードブロック（CommonMark と同じく、段落の途中では始まらない）。
+    // リストの中では、項目の本文より浅い字下げは項目の続きの段落になる
+    if (open === undefined && indent >= (listColumn ?? 0) + 4) {
+      inBody = true;
+      verbatim(line);
+      continue;
+    }
+
+    const fenceStart = /^(`{3,}|~{3,})/.exec(t);
+    if (fenceStart) {
+      fence = { marker: fenceStart[1]!, keep: inBody };
+      if (fence.keep) verbatim(line);
+      else open = undefined;
+      continue;
+    }
     if (RULE.test(t)) {
+      inBody = false;
       open = undefined;
       continue;
     }
+    inBody = true;
+
     // 表と、HTML だけの行はそのまま
     if (/^\|.*\|$/.test(t) || /^<[^>]+>$/.test(t)) {
       verbatim(line);
@@ -108,6 +132,7 @@ export function segmentMarkdown(markdown: string, targetLang: string): Segmented
     }
     const item = LIST_ITEM.exec(line);
     if (item) {
+      listColumn = columns(item[1]!);
       prose(item[1]!, item[2]!);
       continue;
     }
@@ -115,7 +140,8 @@ export function segmentMarkdown(markdown: string, targetLang: string): Segmented
       open.text = joinLine(open.text, t);
       continue;
     }
-    prose('', t);
+    // 字下げを残すのは、リスト項目の続きの段落を、訳文でもリストの中に置くため
+    prose(leading, t);
   }
 
   // リンク先を記号に置き換え、訳す必要のない段落を verbatim に戻す
@@ -142,9 +168,16 @@ export function hasProse(seg: SegmentedMarkdown): boolean {
 }
 
 /**
- * 訳文の L<n> を元のリンク先に戻す。元の文書になかったリンク（モデルが作ったもの）は文字だけ残して外す。
- * 空行が3つ以上続く部分も詰める。
+ * 段落の訳文（ブロックの番号 → 訳文）を元の構造に組み戻し、ホバーに出す Markdown にする。
+ * リンクを戻すのは訳文の段落だけ。そのまま残したコードにかけると、`handlers[name](event)` のような式をリンクと見なして壊すため。
  */
+export function renderTranslation(seg: SegmentedMarkdown, translations: ReadonlyMap<number, string>): string {
+  const restored = new Map<number, string>();
+  for (const [index, text] of translations) restored.set(index, restoreLinks(text, seg.links));
+  return reassemble(seg.blocks, restored);
+}
+
+/** 訳文の L<n> を元のリンク先に戻す。元の文書になかったリンク（モデルが作ったもの）は文字だけ残して外す */
 export function restoreLinks(text: string, links: readonly string[]): string {
   const allowed = new Set(links);
   return text
@@ -157,16 +190,25 @@ export function restoreLinks(text: string, links: readonly string[]): string {
       return label.replace(/^!?\[/, '').replace(/\]$/, '');
     })
     .replace(/<([a-z][\w+.-]*:[^>\s]*)>/gi, (m, url: string) => (allowed.has(url) ? m : url))
-    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
+/** 文字列が占める桁数。タブは次の 4 の倍数の桁まで進める（CommonMark と同じ数え方） */
+function columns(s: string): number {
+  let n = 0;
+  for (const c of s) n = c === '\t' ? n + 4 - (n % 4) : n + 1;
+  return n;
+}
+
+/**
+ * 前後の空行を取り除く。
+ * 間に続く空行を1つに詰めないのは、コードブロックの中の空行を変えないため（それ以外では Markdown の表示は変わらない）
+ */
 function trimBlank(blocks: Block[]): Block[] {
   let s = 0;
   let e = blocks.length;
   const blank = (b: Block | undefined) => b?.type === 'verbatim' && b.text.trim() === '';
   while (s < e && blank(blocks[s])) s++;
   while (e > s && blank(blocks[e - 1])) e--;
-  // 連続する空行は1つにする
-  return blocks.slice(s, e).filter((b, i, arr) => !(blank(b) && blank(arr[i - 1])));
+  return blocks.slice(s, e);
 }

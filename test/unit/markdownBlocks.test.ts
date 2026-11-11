@@ -124,6 +124,33 @@ test('字下げのコードは、段落の途中やリスト項目の続きで�
   assert.ok(reassemble(seg.blocks, new Map()).endsWith('\n\n    code()'));
 });
 
+test('段落の途中で 4 桁以上字下げした行は、見出しやリストなどにせず段落の続きにする', () => {
+  // Ruby の言語サーバーは RDoc をそのまま返す（cgi.rb）。2 行目の "# ..." は、原文のホバーでも段落の一部として表示される
+  const rdoc = [
+    '=== Get form values',
+    '',
+    '  require "cgi"',
+    "  value = cgi['field_name']   # <== value string for 'field_name'",
+    "    # if not 'field_name' included, then return \"\".",
+    '  fields = cgi.keys            # <== array of field names',
+    '',
+    "  # returns true if form has 'field_name'",
+    "  cgi.has_key?('field_name')",
+  ].join('\n');
+  assert.deepEqual(prose(segmentMarkdown(rdoc, 'ja')), [
+    ['', '=== Get form values'],
+    [
+      '  ',
+      `require "cgi" value = cgi['field_name']   # <== value string for 'field_name' # if not 'field_name' included, then return "". fields = cgi.keys            # <== array of field names`,
+    ],
+    // 字下げが 3 桁までなら、空行の後の "# ..." は原文でも見出しになる
+    ['# ', "returns true if form has 'field_name'"],
+  ]);
+
+  const others = segmentMarkdown(['Some text', '    - not a list', '    > not a quote', '    ---', '    ```', 'end.'].join('\n'), 'ja');
+  assert.deepEqual(prose(others), [['', 'Some text - not a list > not a quote --- ``` end.']]);
+});
+
 test('本文中のコードブロックは、空行も含めて元の形のまま残し、シグネチャとして扱わない', () => {
   const python = ['```python', 'def f():', '    pass', '', '', 'def g():', '    pass', '```'].join('\n');
   const seg = segmentMarkdown(`Example usage:\n\n${python}\n\nMore text here.`, 'ja');

@@ -74,11 +74,15 @@ export function segmentMarkdown(markdown: string, targetLang: string): Segmented
     const indent = columns(leading);
     // 段落の途中の行は字下げに関係なく段落の続きなので、リストが終わるのは段落の外で浅い行が来たときだけ
     if (open === undefined && listColumn !== undefined && indent < listColumn) listColumn = undefined;
-    // 字下げによるコードブロック（CommonMark と同じく、段落の途中では始まらない）。
-    // リストの中では、項目の本文より浅い字下げは項目の続きの段落になる
-    if (open === undefined && indent >= (listColumn ?? 0) + 4) {
-      inBody = true;
-      verbatim(line);
+    // 4 桁以上の字下げは、見出しやリストなどの始まりにはならない（CommonMark で認めるのは 3 桁まで）。
+    // 段落の途中なら段落の続き、そうでなければ字下げによるコードブロック。リストの中では項目の本文の桁から数える
+    if (indent >= (listColumn ?? 0) + 4) {
+      if (open) {
+        open.text = joinLine(open.text, t);
+      } else {
+        inBody = true;
+        verbatim(line);
+      }
       continue;
     }
 

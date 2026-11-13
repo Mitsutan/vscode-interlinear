@@ -13,6 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # 既定の深さ 1 では、main の履歴をたどれない
+      # main は PR からしか変えられないので、main にあるコミットはレビューと CI を通っている
+      - name: タグのコミットが main にあるか
+        run: |
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::タグ（$GITHUB_REF_NAME）のコミットが main にありません。PR でマージした main のコミットにタグを付けてください"
+            exit 1
+          fi
       - name: タグ・package.json・CHANGELOG.md の版がそろっているか
         run: |
           version=$(jq -r .version package.json)

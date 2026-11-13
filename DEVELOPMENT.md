@@ -133,13 +133,13 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 
 1. `package.json` の `version` を上げ、`CHANGELOG.md` にその版の節を書く。見出しは `## 0.2.0（2026-12-01）` のように版で始め、`（未リリース）` を外す。
 2. PR を作り、CI が通ったらマージする（main へは PR でしか変更できない）。
-3. マージした main を取り込んで、タグを push する（PR のブランチのコミットに付けない）。
+3. マージした main を取り込んで、タグを push する（PR のブランチのコミットに付けない）。`v*` のタグは、ruleset「release tags」で admin しか作成・更新・削除できない。
 
    ```bash
    git switch main && git pull && git tag v0.2.0 && git push origin v0.2.0
    ```
 
-4. `release.yml` が、タグ・`package.json`・`CHANGELOG.md` の版がそろっているかを確かめ、CI と同じテストを通した VSIX を Marketplace に公開する。続けて、その VSIX と `CHANGELOG.md` の節で GitHub Release を作る。
+4. `release.yml` が、タグのコミットが main にあるかと、タグ・`package.json`・`CHANGELOG.md` の版がそろっているかを確かめ、CI と同じテストを通した VSIX を Marketplace に公開する。続けて、その VSIX と `CHANGELOG.md` の節で GitHub Release を作る。
 
 **版の付け方**: マイナー版が奇数ならプレリリース、偶数なら正式版（例: 0.1.x はプレリリース、0.2.x は正式版）。`npm run package`（`scripts/package.ts`）が版から決めて VSIX に書き込む。プレリリースと正式版で同じ版は使えない。
 

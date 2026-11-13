@@ -9,7 +9,7 @@
 import * as vscode from 'vscode';
 import type { TranslatableText } from '../core/context.ts';
 import { CommentExtractor } from '../core/extract.ts';
-import { hasProse, restoreLinks, segmentMarkdown, type SegmentedMarkdown } from '../core/markdownBlocks.ts';
+import { hasProse, renderTranslation, segmentMarkdown, type SegmentedMarkdown } from '../core/markdownBlocks.ts';
 import { containsPosition } from '../core/normalize.ts';
 import { Priority, type TaskHandle } from '../translation/queue.ts';
 import type { TranslationService } from '../translation/service.ts';
@@ -89,11 +89,12 @@ export class DocHoverProvider implements vscode.HoverProvider {
     if (items.length === 0) return undefined;
     const range = hovers.find((h) => h.range)?.range;
 
-    const cached = items.map((i) => this.service.peek(i.text));
-    if (cached.every((c) => c !== undefined)) return this.render(items, cached as string[], range);
+    const cached = items.map((i) => this.service.peekBlocks(i.text));
+    const complete = items.map((item, i) => item.segmented.blocks.every((b, index) => b.type !== 'prose' || cached[i]!.has(index)));
+    if (complete.every(Boolean)) return this.render(items, cached, range);
 
-    const handles: Array<TaskHandle<string> | undefined> = items.map((item, i) =>
-      cached[i] === undefined ? this.service.translate(item.text, Priority.Interactive) : undefined,
+    const handles: Array<TaskHandle<Map<number, string>> | undefined> = items.map((item, i) =>
+      complete[i] ? undefined : this.service.translateBlocks(item.text, Priority.Interactive),
     );
     try {
       const results = await untilCancelled(
@@ -113,13 +114,18 @@ export class DocHoverProvider implements vscode.HoverProvider {
     }
   }
 
-  private render(items: readonly Item[], texts: readonly string[], range: vscode.Range | undefined): vscode.Hover | undefined {
+  private render(
+    items: readonly Item[],
+    translations: ReadonlyArray<ReadonlyMap<number, string>>,
+    range: vscode.Range | undefined,
+  ): vscode.Hover | undefined {
     const contents: vscode.MarkdownString[] = [];
     items.forEach((item, i) => {
-      const body = restoreLinks(texts[i] ?? '', item.segmented.links);
-      if (body === '') return;
+      const body = renderTranslation(item.segmented, translations[i] ?? new Map());
+      if (body.trim() === '') return;
       const md = new vscode.MarkdownString(body);
-      // 元のホバーと同じ扱いにする（command: リンクなど）。訳文のリンクは restoreLinks で元にあったものだけになっている
+      // 元のホバーと同じ扱いにする（command: リンクなど）。訳文の段落のリンクは元にあったものだけになっていて、
+      // それ以外の部分は元のホバーからそのまま写したもの
       md.isTrusted = item.source.isTrusted;
       md.supportHtml = item.source.supportHtml ?? false;
       md.supportThemeIcons = item.source.supportThemeIcons ?? false;

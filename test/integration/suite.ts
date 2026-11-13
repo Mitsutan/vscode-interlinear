@@ -180,6 +180,22 @@ const DOC_FIXTURE = [
   'add(1, 2);', //                                               8
 ].join('\n');
 
+// gopls が返すホバーと同じ形式（go/doc/comment の Markdown 出力。コード例はタブで字下げする）
+const GO_DOC_HOVER = [
+  '```go',
+  'package units',
+  '```',
+  '',
+  '---',
+  '',
+  'Use [ToFeet] and [ToMeters] to convert lengths between metric and imperial units.',
+  '',
+  '\tft := units.ToFeet(3.5)',
+  '\tm := units.ToMeters(ft)',
+  '',
+  'Both functions accept negative values.',
+].join('\n');
+
 export async function run(): Promise<void> {
   const mock = await startMockServer();
   await setConfig('endpoint', mock.url);
@@ -344,6 +360,45 @@ export async function run(): Promise<void> {
           assert.doesNotMatch(off, /\[訳\]/);
         } finally {
           await setConfig('translateDocumentation', true);
+        }
+      },
+    ],
+    [
+      'ドキュメント: 字下げのコード例（gopls の形式）は訳さず、行と字下げを元のまま訳文に残す',
+      async () => {
+        // CI には gopls がないので、gopls と同じ形式の Markdown を返すホバーを登録する
+        const provider = vscode.languages.registerHoverProvider('go', {
+          provideHover: () => new vscode.Hover(new vscode.MarkdownString(GO_DOC_HOVER)),
+        });
+        try {
+          const goDoc = await vscode.workspace.openTextDocument({ language: 'go', content: 'package main\n\nfunc main() { units.ToFeet(1) }\n' });
+          await vscode.window.showTextDocument(goDoc);
+          const translation = async () => {
+            const hovers = await vscode.commands.executeCommand<vscode.Hover[]>('vscode.executeHoverProvider', goDoc.uri, new vscode.Position(2, 16));
+            return hovers
+              .flatMap((h) => h.contents)
+              .map((c) => (typeof c === 'string' ? c : c.value))
+              .find((v) => v.includes('[訳]'));
+          };
+          const expected = [
+            '[訳]Use [ToFeet] and [ToMeters] to convert lengths between metric and imperial units.',
+            '',
+            '\tft := units.ToFeet(3.5)',
+            '\tm := units.ToMeters(ft)',
+            '',
+            '[訳]Both functions accept negative values.',
+          ].join('\n');
+          const before = mock.prompts.length;
+          assert.equal(await translation(), expected);
+          const prompts = mock.prompts.slice(before);
+          assert.equal(prompts.length, 2, 'コードはモデルに送らない');
+          assert.ok(prompts.every((p) => p.includes('Symbol: package units')), prompts.join('\n'));
+
+          // 2回目はキャッシュから同じ訳文を返す
+          assert.equal(await translation(), expected);
+          assert.equal(mock.prompts.length, before + 2);
+        } finally {
+          provider.dispose();
         }
       },
     ],

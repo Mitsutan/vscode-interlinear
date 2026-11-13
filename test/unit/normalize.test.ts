@@ -70,16 +70,16 @@ test('JSDoc: 入れ子の波かっこを含む型も、型ごと残して説明�
   assert.deepEqual(
     toBlocks(
       [
-        '@param {{ error: boolean }} [contextOptions] - pass {error:true} to write to stderr',
+        '@param {{ verbose: boolean }} [logOptions] - pass {verbose:true} to log every step',
         '@param {{ a: { b: string } }} deep The deep one.',
-        '@returns {{ type: "element" | "literal"; value: string; }[]} The parts.',
+        '@returns {{ kind: "file" | "dir"; name: string; }[]} The entries.',
         '@return {{operands: string[], unknown: string[]}}',
       ].join('\n'),
     ),
     [
-      { type: 'prose', prefix: '@param {{ error: boolean }} [contextOptions] - ', text: 'pass {error:true} to write to stderr' },
+      { type: 'prose', prefix: '@param {{ verbose: boolean }} [logOptions] - ', text: 'pass {verbose:true} to log every step' },
       { type: 'prose', prefix: '@param {{ a: { b: string } }} deep ', text: 'The deep one.' },
-      { type: 'prose', prefix: '@returns {{ type: "element" | "literal"; value: string; }[]} ', text: 'The parts.' },
+      { type: 'prose', prefix: '@returns {{ kind: "file" | "dir"; name: string; }[]} ', text: 'The entries.' },
       // 説明文がないので訳さない（型の閉じかっこだけを翻訳に回さない）
       { type: 'verbatim', text: '@return {{operands: string[], unknown: string[]}}' },
     ],

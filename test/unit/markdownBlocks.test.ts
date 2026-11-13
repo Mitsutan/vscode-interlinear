@@ -6,14 +6,14 @@ import { hasProse, renderTranslation, restoreLinks, segmentMarkdown } from '../.
 // VS Code の TypeScript 拡張が返すホバーの形式
 const TS_HOVER = [
   '```typescript',
-  'function readFileSync(path: PathOrFileDescriptor): Buffer',
+  'function loadConfig(path: string, options?: LoadOptions): Config',
   '```',
-  'Returns the contents of the `path`.',
+  'Loads the settings stored at `path`.',
   '',
-  'For details, see [readFile](command:_typescript.openJsDocLink?%5B%7B%22file%22%3A1%7D%5D) and',
-  'the [docs](https://nodejs.org/api/fs.html "Node.js docs").',
+  'For details, see [parseConfig](command:_typescript.openJsDocLink?%5B%7B%22file%22%3A1%7D%5D) and',
+  'the [guide](https://example.com/config.html "Config guide").',
   '',
-  '*@param* `path` — filename or file descriptor',
+  '*@param* `path` — location of the settings file',
   '',
   '*@param* `options`  ',
   'Options that span',
@@ -23,7 +23,7 @@ const TS_HOVER = [
   '',
   '*@example*  ',
   '```js',
-  "readFileSync('/etc/passwd');",
+  "loadConfig('/etc/app.json');",
   '```',
 ].join('\n');
 
@@ -32,66 +32,66 @@ const prose = (seg: ReturnType<typeof segmentMarkdown>) =>
 
 test('TypeScript のホバー: 文章とタグの説明だけを訳し、シグネチャは訳文に入れない', () => {
   const seg = segmentMarkdown(TS_HOVER, 'ja');
-  assert.equal(seg.signature, 'function readFileSync(path: PathOrFileDescriptor): Buffer');
+  assert.equal(seg.signature, 'function loadConfig(path: string, options?: LoadOptions): Config');
   assert.deepEqual(prose(seg), [
-    ['', 'Returns the contents of the `path`.'],
-    ['', 'For details, see [readFile](L0) and the [docs](L1).'],
-    ['*@param* `path` — ', 'filename or file descriptor'],
+    ['', 'Loads the settings stored at `path`.'],
+    ['', 'For details, see [parseConfig](L0) and the [guide](L1).'],
+    ['*@param* `path` — ', 'location of the settings file'],
     ['*@param* `options` ', 'Options that span multiple lines.'],
   ]);
   assert.deepEqual(seg.links, [
     'command:_typescript.openJsDocLink?%5B%7B%22file%22%3A1%7D%5D',
-    'https://nodejs.org/api/fs.html "Node.js docs"',
+    'https://example.com/config.html "Config guide"',
   ]);
   // @since は文章がほとんどないので訳さない。@example のコードは元の形のまま残す
   const text = reassemble(seg.blocks, new Map());
   assert.match(text, /\*@since\* — v0\.1\.8/);
-  assert.doesNotMatch(text, /function readFileSync/);
-  assert.ok(text.endsWith("*@example*  \n```js\nreadFileSync('/etc/passwd');\n```"), text);
+  assert.doesNotMatch(text, /function loadConfig/);
+  assert.ok(text.endsWith("*@example*  \n```js\nloadConfig('/etc/app.json');\n```"), text);
 });
 
 // gopls が返すホバーの形式（go/doc/comment の Markdown 出力）。段落は1行、コードはタブで字下げする
 const GO_HOVER = [
   '```go',
-  'package strconv',
+  'package units',
   '```',
   '',
   '---',
   '',
-  'Package strconv implements conversions to and from string representations of basic data types.',
+  'Package units converts lengths between metric and imperial units.',
   '',
-  '### Numeric Conversions',
+  '### Length',
   '',
-  'The most common numeric conversions are [Atoi] (string to int) and [Itoa] (int to string).',
+  'Use [ToFeet] and [ToMeters] for single values.',
   '',
-  '\ti, err := strconv.Atoi("-42")',
-  '\ts := strconv.Itoa(-42)',
+  '\tft := units.ToFeet(3.5)',
+  '\tm := units.ToMeters(ft)',
   '',
-  'The parse functions return the widest type:',
+  'Very large values may lose precision:',
   '',
-  '\ts := "2147483647" // biggest int32',
-  '\ti64, err := strconv.ParseInt(s, 10, 32)',
+  '\tbig := 1e18 // farther than any real trip',
+  '\tft := units.ToFeet(big)',
   '',
-  '\ti := int32(i64)',
+  '\tfmt.Println(ft)',
   '',
-  '[Unquote] and [UnquoteChar] unquote Go string and rune literals.',
+  '[Round] and [Truncate] adjust the precision of the results.',
 ].join('\n');
 
 test('Go のホバー: 字下げのコードは訳さず、行も字下げも元のまま残す', () => {
   const seg = segmentMarkdown(GO_HOVER, 'ja');
-  assert.equal(seg.signature, 'package strconv');
+  assert.equal(seg.signature, 'package units');
   assert.deepEqual(prose(seg), [
-    ['', 'Package strconv implements conversions to and from string representations of basic data types.'],
-    ['### ', 'Numeric Conversions'],
-    ['', 'The most common numeric conversions are [Atoi] (string to int) and [Itoa] (int to string).'],
-    ['', 'The parse functions return the widest type:'],
-    ['', '[Unquote] and [UnquoteChar] unquote Go string and rune literals.'],
+    ['', 'Package units converts lengths between metric and imperial units.'],
+    ['### ', 'Length'],
+    ['', 'Use [ToFeet] and [ToMeters] for single values.'],
+    ['', 'Very large values may lose precision:'],
+    ['', '[Round] and [Truncate] adjust the precision of the results.'],
   ]);
   const text = reassemble(seg.blocks, new Map());
-  assert.ok(text.startsWith('Package strconv implements'), text);
-  assert.ok(text.includes('\n\n\ti, err := strconv.Atoi("-42")\n\ts := strconv.Itoa(-42)\n\n'), text);
+  assert.ok(text.startsWith('Package units converts'), text);
+  assert.ok(text.includes('\n\n\tft := units.ToFeet(3.5)\n\tm := units.ToMeters(ft)\n\n'), text);
   // コードの中の空行も残す
-  assert.ok(text.includes('\n\ts := "2147483647" // biggest int32\n\ti64, err := strconv.ParseInt(s, 10, 32)\n\n\ti := int32(i64)\n'), text);
+  assert.ok(text.includes('\n\tbig := 1e18 // farther than any real trip\n\tft := units.ToFeet(big)\n\n\tfmt.Println(ft)\n'), text);
 });
 
 test('字下げのコードは、段落の途中やリスト項目の続きでは始まらない', () => {
@@ -125,26 +125,25 @@ test('字下げのコードは、段落の途中やリスト項目の続きで�
 });
 
 test('段落の途中で 4 桁以上字下げした行は、見出しやリストなどにせず段落の続きにする', () => {
-  // Ruby の言語サーバーは RDoc をそのまま返す（cgi.rb）。2 行目の "# ..." は、原文のホバーでも段落の一部として表示される
+  // Ruby の言語サーバーは RDoc をそのまま返す。コード例の 3 行目の "# ..." は、原文のホバーでも段落の一部として表示される
   const rdoc = [
-    '=== Get form values',
+    '=== Read settings',
     '',
-    '  require "cgi"',
-    "  value = cgi['field_name']   # <== value string for 'field_name'",
-    "    # if not 'field_name' included, then return \"\".",
-    '  fields = cgi.keys            # <== array of field names',
+    '  require "settings"',
+    "  port = conf['port']   # <== value of 'port'",
+    "    # if 'port' is missing, then returns nil.",
+    '  names = conf.keys     # <== list of setting names',
     '',
-    "  # returns true if form has 'field_name'",
-    "  cgi.has_key?('field_name')",
+    "  # returns true if 'port' is set",
   ].join('\n');
   assert.deepEqual(prose(segmentMarkdown(rdoc, 'ja')), [
-    ['', '=== Get form values'],
+    ['', '=== Read settings'],
     [
       '  ',
-      `require "cgi" value = cgi['field_name']   # <== value string for 'field_name' # if not 'field_name' included, then return "". fields = cgi.keys            # <== array of field names`,
+      `require "settings" port = conf['port']   # <== value of 'port' # if 'port' is missing, then returns nil. names = conf.keys     # <== list of setting names`,
     ],
     // 字下げが 3 桁までなら、空行の後の "# ..." は原文でも見出しになる
-    ['# ', "returns true if form has 'field_name'"],
+    ['# ', "returns true if 'port' is set"],
   ]);
 
   const others = segmentMarkdown(['Some text', '    - not a list', '    > not a quote', '    ---', '    ```', 'end.'].join('\n'), 'ja');

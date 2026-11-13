@@ -183,17 +183,17 @@ const DOC_FIXTURE = [
 // gopls が返すホバーと同じ形式（go/doc/comment の Markdown 出力。コード例はタブで字下げする）
 const GO_DOC_HOVER = [
   '```go',
-  'package strconv',
+  'package units',
   '```',
   '',
   '---',
   '',
-  'The most common numeric conversions are [Atoi] (string to int) and [Itoa] (int to string).',
+  'Use [ToFeet] and [ToMeters] to convert lengths between metric and imperial units.',
   '',
-  '\ti, err := strconv.Atoi("-42")',
-  '\ts := strconv.Itoa(-42)',
+  '\tft := units.ToFeet(3.5)',
+  '\tm := units.ToMeters(ft)',
   '',
-  'These assume decimal and the Go int type.',
+  'Both functions accept negative values.',
 ].join('\n');
 
 export async function run(): Promise<void> {
@@ -371,7 +371,7 @@ export async function run(): Promise<void> {
           provideHover: () => new vscode.Hover(new vscode.MarkdownString(GO_DOC_HOVER)),
         });
         try {
-          const goDoc = await vscode.workspace.openTextDocument({ language: 'go', content: 'package main\n\nfunc main() { strconv.Itoa(1) }\n' });
+          const goDoc = await vscode.workspace.openTextDocument({ language: 'go', content: 'package main\n\nfunc main() { units.ToFeet(1) }\n' });
           await vscode.window.showTextDocument(goDoc);
           const translation = async () => {
             const hovers = await vscode.commands.executeCommand<vscode.Hover[]>('vscode.executeHoverProvider', goDoc.uri, new vscode.Position(2, 16));
@@ -381,18 +381,18 @@ export async function run(): Promise<void> {
               .find((v) => v.includes('[訳]'));
           };
           const expected = [
-            '[訳]The most common numeric conversions are [Atoi] (string to int) and [Itoa] (int to string).',
+            '[訳]Use [ToFeet] and [ToMeters] to convert lengths between metric and imperial units.',
             '',
-            '\ti, err := strconv.Atoi("-42")',
-            '\ts := strconv.Itoa(-42)',
+            '\tft := units.ToFeet(3.5)',
+            '\tm := units.ToMeters(ft)',
             '',
-            '[訳]These assume decimal and the Go int type.',
+            '[訳]Both functions accept negative values.',
           ].join('\n');
           const before = mock.prompts.length;
           assert.equal(await translation(), expected);
           const prompts = mock.prompts.slice(before);
           assert.equal(prompts.length, 2, 'コードはモデルに送らない');
-          assert.ok(prompts.every((p) => p.includes('Symbol: package strconv')), prompts.join('\n'));
+          assert.ok(prompts.every((p) => p.includes('Symbol: package units')), prompts.join('\n'));
 
           // 2回目はキャッシュから同じ訳文を返す
           assert.equal(await translation(), expected);

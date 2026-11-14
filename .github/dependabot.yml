@@ -19,6 +19,9 @@ updates:
       # engines.vscode より新しい型を使うと、存在しない API も使えてしまい、vsce もパッケージを作らない。
       # engines.vscode を上げるときに手で合わせる
       - dependency-name: '@types/vscode'
+      # VS Code がホバーの表示に使う marked と同じ版にして、Markdown の区切り方を原文の表示と揃える。
+      # VS Code の src/vs/base/common/marked/cgmanifest.json の版が変わったときに、手で合わせる
+      - dependency-name: marked
 
   - package-ecosystem: github-actions
     directory: /

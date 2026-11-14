@@ -265,6 +265,7 @@
     "@vscode/tree-sitter-wasm": "0.3.1",
     "@vscode/vsce": "4.1.0",
     "esbuild": "0.28.2",
+    "marked": "14.0.0",
     "typescript": "7.0.2"
   },
   "repository": {

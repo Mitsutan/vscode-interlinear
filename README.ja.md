@@ -1,4 +1,4 @@
-# Interlinear
+<h1 align="center"><img src="images/logo.png" alt="Interlinear" width="560"></h1>
 
 [English](README.md) | 日本語
 

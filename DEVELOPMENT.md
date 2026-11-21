@@ -105,6 +105,7 @@ INTERLINEAR_EXTENSION_PATH=/tmp/vsix/extension xvfb-run -a node test/integration
 | `scripts/install-real.ts` | 自動管理と同じ方法で llama.cpp とモデルをダウンロードし、実物を使うテスト用の環境変数を出力する |
 | `scripts/screenshots.sh` | 仮想ディスプレイで VS Code を動かし、README のスクリーンショットを撮る |
 | `images/icon.svg` | アイコンの元データ。Marketplace は SVG のアイコンを受け付けないので、PNG にしたもの（`images/icon.png`）を使う。変えたら `magick -background none -density 96 images/icon.svg -resize 256x256 -strip PNG32:images/icon.png` で作り直す |
+| `images/logo.png` | README の先頭のロゴ。GitHub のソーシャルプレビュー（リポジトリの Settings で設定する）と同じ画像なので、2:1 の大きさ（1280×640）にしている。変えたらソーシャルプレビューも差し替える |
 
 ## 画面の文言（英語・日本語）
 
